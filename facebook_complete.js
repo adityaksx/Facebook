@@ -693,15 +693,25 @@ function setupImageModal() {
         modalImg.style.cursor = currentZoom > 1 ? 'grab' : 'default';
     });
     
-    let touchStartX = 0, touchStartY = 0;
+    // ============================================
+    // TOUCH GESTURES - COMPLETE FIXED VERSION
+    // ============================================
+    
+    let touchStartX = 0;
+    let touchStartY = 0;
+    let touchEndX = 0;
+    let touchEndY = 0;
     let touchMoved = false;
     let initialDistance = 0;
     let initialZoom = 1;
     
+    // TOUCH START
     imageWrapper.addEventListener('touchstart', (e) => {
         if (e.touches.length === 1) {
             touchStartX = e.touches[0].clientX;
             touchStartY = e.touches[0].clientY;
+            touchEndX = touchStartX;
+            touchEndY = touchStartY;
             touchMoved = false;
         } else if (e.touches.length === 2) {
             const dx = e.touches[0].clientX - e.touches[1].clientX;
@@ -711,10 +721,20 @@ function setupImageModal() {
         }
     }, { passive: true });
     
+    // TOUCH MOVE
     imageWrapper.addEventListener('touchmove', (e) => {
-        touchMoved = true;
-        
-        if (e.touches.length === 2) {
+        if (e.touches.length === 1) {
+            touchEndX = e.touches[0].clientX;
+            touchEndY = e.touches[0].clientY;
+            
+            const deltaX = Math.abs(touchEndX - touchStartX);
+            const deltaY = Math.abs(touchEndY - touchStartY);
+            
+            if (deltaX > 10 || deltaY > 10) {
+                touchMoved = true;
+            }
+        } else if (e.touches.length === 2) {
+            touchMoved = true;
             const dx = e.touches[0].clientX - e.touches[1].clientX;
             const dy = e.touches[0].clientY - e.touches[1].clientY;
             const distance = Math.sqrt(dx * dx + dy * dy);
@@ -725,26 +745,41 @@ function setupImageModal() {
         }
     }, { passive: true });
     
+    // TOUCH END
     imageWrapper.addEventListener('touchend', (e) => {
-        if (e.changedTouches.length === 1 && !touchMoved) {
-            if (currentZoom === 1) {
-                currentZoom = 2;
-            } else {
-                resetZoom();
+        if (e.changedTouches.length === 1 && e.touches.length === 0) {
+            const deltaX = touchEndX - touchStartX;
+            const deltaY = touchEndY - touchStartY;
+            const absDeltaX = Math.abs(deltaX);
+            const absDeltaY = Math.abs(deltaY);
+            
+            // Check if horizontal swipe
+            const isHorizontalSwipe = absDeltaX > absDeltaY && absDeltaX > 50;
+            
+            if (touchMoved && isHorizontalSwipe && currentZoom === 1) {
+                // Horizontal swipe detected
+                if (deltaX > 0) {
+                    // Swipe RIGHT -> Previous image
+                    navigateImage(-1);
+                } else {
+                    // Swipe LEFT -> Next image
+                    navigateImage(1);
+                }
+            } else if (!touchMoved) {
+                // Quick tap - toggle zoom
+                if (currentZoom === 1) {
+                    currentZoom = 2;
+                } else {
+                    resetZoom();
+                }
+                applyTransform();
             }
-            applyTransform();
         }
         
-        if (!touchMoved && e.touches.length === 0) {
-            const endX = e.changedTouches[0].clientX;
-            const dx = endX - touchStartX;
-            
-            if (Math.abs(dx) > 50) {
-                if (dx > 0) navigateImage(-1);
-                else navigateImage(1);
-            }
-        }
+        // Reset
+        touchMoved = false;
     }, { passive: true });
+
     
     function onKeyDown(e) {
         if (modal.style.display !== 'flex') return;

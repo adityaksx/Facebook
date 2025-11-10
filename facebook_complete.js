@@ -898,7 +898,12 @@ function openImageModal(imageSrc, allImages) {
     modal.style.display = 'flex';
     document.body.classList.add('modal-open');
     
-    // Load the image
+    // Force image to be visible and load immediately
+    modalImage.style.opacity = '1';
+    modalImage.style.display = 'block';
+    modalImage.onload = function() {
+        modalImage.style.opacity = '1';
+    };
     modalImage.src = imageSrc;
     
     // Update counter

@@ -175,7 +175,21 @@ function createPostCard(post) {
     if (post.content) {
         const contentDiv = document.createElement('div');
         contentDiv.className = 'post-content';
-        const cleanedContent = cleanContent(post.content);
+        let cleanedContent = cleanContent(post.content) || '';
+
+        // 1) Trim leading/trailing whitespace/newlines
+        cleanedContent = cleanedContent.replace(/^\s+|\s+$/g, '');
+
+        // 2) Collapse multiple consecutive <br> or newlines to a single <br>
+        cleanedContent = cleanedContent.replace(/(\r\n|\n|\r)/g, '<br>');
+        cleanedContent = cleanedContent.replace(/(<br\s*\/?>\s*){2,}/g, '<br>');
+
+        // 3) Remove empty paragraph tags that may come from HTML extraction
+        cleanedContent = cleanedContent.replace(/<p>\s*<\/p>/gi, '');
+
+        // 4) Make sure we don't inject a leading <br> that creates visual gap
+        cleanedContent = cleanedContent.replace(/^(<br\s*\/?>)+/i, '');
+
         const textDiv = document.createElement('div');
         textDiv.className = 'post-text';
         textDiv.innerHTML = processHashtags(cleanedContent);
@@ -795,23 +809,25 @@ function setupImageModal() {
     
     function closeModal() {
         modal.style.display = 'none';
+        document.body.classList.remove('modal-open');  // ← ADD THIS LINE
         document.body.style.overflow = 'auto';
-        resetZoom();
+        modalImg.src = '';
     }
     
     overlay.onclick = closeModal;
     container.onclick = (e) => e.stopPropagation();
     
-    window.openImageModal = function(src, imagesList) {
-        imageArray = imagesList || [src];
+    window.openImageModal = function(src, imagesList = [src]) {
+        imageArray = imagesList.slice();
         currentIdx = imageArray.indexOf(src);
-        if (currentIdx === -1) currentIdx = 0;
-        
+        if (currentIdx < 0) currentIdx = 0;
         modal.style.display = 'flex';
+        document.body.classList.add('modal-open');  // ← ADD THIS LINE
+        modalImg.src = imageArray[currentIdx];
+        updateButtons();
+        preloadImage(currentIdx + 1);
+        preloadImage(currentIdx - 1);
         document.body.style.overflow = 'hidden';
-        
-        loadImage();
-        resetZoom();
     };
 }
 
@@ -864,5 +880,80 @@ function convertGoogleDriveUrl(url) {
     return null;
 }
 
+// ============================================
+// IMAGE MODAL/LIGHTBOX FUNCTIONS
+// ============================================
 
+function openImageModal(imageSrc, allImages) {
+    const modal = document.getElementById('imageModal');
+    const modalImage = document.getElementById('modalImage');
+    const imageCounter = document.getElementById('imageCounter');
+    const thumbnailStrip = document.getElementById('thumbnailStrip');
+    
+    // Store all images for navigation
+    window.currentImages = allImages;
+    window.currentImageIndex = allImages.indexOf(imageSrc);
+    
+    // Show modal immediately
+    modal.style.display = 'flex';
+    document.body.classList.add('modal-open');
+    
+    // Load the image
+    modalImage.src = imageSrc;
+    
+    // Update counter
+    imageCounter.textContent = `${window.currentImageIndex + 1} / ${allImages.length}`;
+    
+    // Generate thumbnails
+    thumbnailStrip.innerHTML = '';
+    allImages.forEach((img, index) => {
+        const thumb = document.createElement('div');
+        thumb.className = 'thumbnail' + (index === window.currentImageIndex ? ' active' : '');
+        
+        const thumbImg = document.createElement('img');
+        thumbImg.src = img;
+        thumbImg.alt = `Image ${index + 1}`;
+        thumb.appendChild(thumbImg);
+        
+        thumb.onclick = (e) => {
+            e.stopPropagation();
+            showImage(index);
+        };
+        
+        thumbnailStrip.appendChild(thumb);
+    });
+    
+    // Update navigation buttons
+    updateNavButtons();
+}
 
+function showImage(index) {
+    const modalImage = document.getElementById('modalImage');
+    const imageCounter = document.getElementById('imageCounter');
+    
+    window.currentImageIndex = index;
+    modalImage.src = window.currentImages[index];
+    imageCounter.textContent = `${index + 1} / ${window.currentImages.length}`;
+    
+    // Update active thumbnail
+    document.querySelectorAll('.thumbnail').forEach((thumb, i) => {
+        if (i === index) {
+            thumb.classList.add('active');
+            thumb.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+        } else {
+            thumb.classList.remove('active');
+        }
+    });
+    
+    updateNavButtons();
+}
+
+function updateNavButtons() {
+    const prevBtn = document.querySelector('.modal-prev');
+    const nextBtn = document.querySelector('.modal-next');
+    
+    if (prevBtn && nextBtn) {
+        prevBtn.style.display = window.currentImageIndex === 0 ? 'none' : 'flex';
+        nextBtn.style.display = window.currentImageIndex === window.currentImages.length - 1 ? 'none' : 'flex';
+    }
+}

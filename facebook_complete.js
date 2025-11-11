@@ -376,8 +376,6 @@ function createPostCard(post) {
 function cleanContent(content) {
     if (!content) return '';
     const stopPhrases = [
-        'mobile uploads', 'satyapal singh',
-        'added a new photo', 'added photos', 'date unknown'
     ];
     const lines = content.split('\n');
     const cleaned = [];

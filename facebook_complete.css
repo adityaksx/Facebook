@@ -1279,6 +1279,10 @@ body.modal-open {
         font-size: 18px;
     }
 
+    .nav-right {
+    display: none !important;
+    }
+
     .cover-photo {
         height: 200px;
     }

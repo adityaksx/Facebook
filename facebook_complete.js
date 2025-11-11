@@ -838,29 +838,33 @@ function setupImageModal() {
     document.addEventListener('keydown', onKeyDown);
     
     function closeModal() {
+        // Hide the modal overlay
         modal.style.display = 'none';
         document.body.classList.remove('modal-open');
         document.body.style.overflow = 'auto';
         modalImg.src = '';
 
-        // Restore scroll position
-        if (window._scrollY !== undefined) {
-            setTimeout(() => {
-                window.scrollTo(0, window._scrollY);
+        // Restore scroll position after modal close
+        if (typeof window.lastScrollY !== 'undefined') {
+            setTimeout(function() {
+                window.scrollTo(0, window.lastScrollY);
             }, 0);
         }
+
+        // Go back in history if modal was opened through pushState
         if (window.history.state && window.history.state.modalOpen) {
             history.back();
         }
-
     }
+
     
     overlay.onclick = closeModal;
     container.onclick = (e) => e.stopPropagation();
     
     window.openImageModal = function(src, imagesList = [src]) {
         // Save current scroll position
-        window._scrollY = window.scrollY || window.pageYOffset;
+        window.lastScrollY = window.scrollY || window.pageYOffset; // Save scroll position
+        history.pushState({ modalOpen: true }, '');
 
         imageArray = imagesList.slice();
         currentIdx = imageArray.indexOf(src);

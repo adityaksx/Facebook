@@ -33,11 +33,12 @@ function throttle(func, limit) {
 
 document.addEventListener('DOMContentLoaded', function() {
     setupYearFilter();
-    loadAllPosts();
+    loadAllPosts();  // This will now initialize search automatically
     setupImageModal();
     setupScrollLoading();
     setupLazyLoadingWithBlur();
 });
+
 
 function setupYearFilter() {
     const yearFilter = document.getElementById('yearFilter');
@@ -66,25 +67,35 @@ function setupYearFilter() {
 async function loadAllPosts() {
     const loadingDiv = document.getElementById('loadingIndicator');
     loadingDiv.style.display = 'block';
+
     const promises = AVAILABLE_YEARS.map(year =>
         fetch(`${JSON_DATA_FOLDER}/posts_${year}.json`)
             .then(res => res.ok ? res.json() : null)
             .catch(() => null)
     );
+
     const results = await Promise.all(promises);
     allPosts = [];
-    results.forEach((data, index) => {
+    results.forEach(data => {
         if (data && data.posts) {
             allPosts.push(...data.posts);
         }
     });
+
     allPosts.sort((a, b) => new Date(b.timestamp || b.date) - new Date(a.timestamp || a.date));
     filteredPosts = [...allPosts];
+
     loadingDiv.style.display = 'none';
     document.getElementById('totalPosts').textContent = allPosts.length;
+
+    // Initialize search AFTER posts are loaded
+    initializeSearch();
+    setupSearch();
+
     renderPosts();
     loadPhotoGrid();
 }
+
 
 function renderPosts() {
     const container = document.getElementById('postsContainer');
@@ -991,4 +1002,144 @@ function updateNavButtons() {
         prevBtn.style.display = window.currentImageIndex === 0 ? 'none' : 'flex';
         nextBtn.style.display = window.currentImageIndex === window.currentImages.length - 1 ? 'none' : 'flex';
     }
+}
+
+// ============================================
+// IMPROVED FLEXIBLE SEARCH
+// ============================================
+
+let fuseInstance = null;
+
+// Parse and normalize dates for better searching
+function normalizeDateForSearch(dateString) {
+    if (!dateString) return '';
+    
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return dateString;
+    
+    // Create multiple date format strings for matching
+    const formats = [
+        date.toLocaleDateString('en-US'),
+        date.toLocaleDateString('en-GB'),
+        date.toDateString(),
+        `${date.getDate()} ${date.toLocaleString('en', { month: 'long' })}`,
+        `${date.toLocaleString('en', { month: 'long' })} ${date.getDate()}`,
+        `${date.getDate()} ${date.toLocaleString('en', { month: 'short' })}`,
+        `${date.toLocaleString('en', { month: 'short' })} ${date.getDate()}`,
+        date.getFullYear().toString(),
+        date.toLocaleString('en', { month: 'long' })
+    ];
+    
+    return formats.join(' ');
+}
+
+// Clean URLs from content (don't search in URLs)
+function cleanContentForSearch(content) {
+    if (!content) return '';
+    
+    // Remove URLs
+    let cleaned = content.replace(/https?:\/\/[^\s]+/g, '');
+    // Remove extra whitespace
+    cleaned = cleaned.replace(/\s+/g, ' ').trim();
+    
+    return cleaned;
+}
+
+// Initialize search with flexible configuration
+function initializeSearch() {
+    // Prepare posts with searchable text
+    const searchablePosts = allPosts.map(post => ({
+        ...post,
+        searchableDate: normalizeDateForSearch(post.timestamp || post.date),
+        searchableContent: cleanContentForSearch(
+            (post.content || '') + ' ' + 
+            (post.location || '') + ' ' + 
+            (post.caption || '')
+        )
+    }));
+
+    // Very flexible Fuse.js configuration
+    const fuseOptions = {
+        keys: [
+            { name: 'searchableContent', weight: 0.7 },  // Higher weight for content
+            { name: 'searchableDate', weight: 0.2 },
+            { name: 'location', weight: 0.1 }
+        ],
+        threshold: 0.4,           // Balanced - not too strict, not too fuzzy
+        distance: 200,
+        minMatchCharLength: 2,
+        ignoreLocation: true,
+        includeScore: true,
+        shouldSort: true,
+        useExtendedSearch: false
+    };
+
+    fuseInstance = new Fuse(searchablePosts, fuseOptions);
+    console.log('✅ Search initialized with', allPosts.length, 'posts');
+}
+
+// Improved search handler
+function handleSearch(searchTerm) {
+    if (!searchTerm || searchTerm.trim() === '') {
+        filteredPosts = [...allPosts];
+        currentPage = 0;
+        document.getElementById('postsContainer').innerHTML = '';
+        renderPosts();
+        updateSearchResults(allPosts.length, '');
+        return;
+    }
+
+    // Perform fuzzy search
+    const results = fuseInstance.search(searchTerm);
+    filteredPosts = results.map(result => result.item);
+    
+    currentPage = 0;
+    document.getElementById('postsContainer').innerHTML = '';
+    renderPosts();
+    updateSearchResults(filteredPosts.length, searchTerm);
+    
+    // Debug log
+    console.log(`Search for "${searchTerm}": found ${filteredPosts.length} posts`);
+}
+
+// Update UI with search results
+function updateSearchResults(count, searchTerm) {
+    const searchResults = document.getElementById('searchResults');
+    if (searchResults) {
+        if (!searchTerm || count === allPosts.length) {
+            searchResults.textContent = '';
+            searchResults.style.display = 'none';
+        } else {
+            searchResults.textContent = `Found ${count} post${count !== 1 ? 's' : ''}`;
+            searchResults.style.display = 'block';
+        }
+    }
+}
+
+// Setup search with debounce
+function setupSearch() {
+    const searchInput = document.getElementById('searchInput');
+    if (!searchInput) {
+        console.error('❌ Search input not found');
+        return;
+    }
+
+    // Debounced search (300ms delay)
+    const debouncedSearch = debounce((value) => {
+        handleSearch(value);
+    }, 300);
+
+    searchInput.addEventListener('input', (e) => {
+        debouncedSearch(e.target.value);
+    });
+
+    // Clear on Escape
+    searchInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            searchInput.value = '';
+            handleSearch('');
+        }
+    });
+
+    console.log('✅ Search listeners attached');
 }

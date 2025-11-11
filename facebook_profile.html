@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <!-- 👇 WITH THESE ENHANCED META TAGS -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+    <meta name="theme-color" content="#1877f2">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="dns-prefetch" href="https://fonts.googleapis.com">
+    <link rel="preload" as="image" href="profile.jpg">
+    <link rel="preload" as="script" href="facebook_complete.js">
+    <title>Satyapal Singh - Facebook</title>
+
+    <!-- 👇 ADD CRITICAL CSS (BEFORE main stylesheet) -->
+    <style>
+        body { margin: 0; font-family: system-ui; }
+        .navbar { position: fixed; top: 0; width: 100%; background: #fff; z-index: 1000; }
+        .main-container { margin-top: 56px; }
+    </style>
+        <!-- Favicon -->
+    <link rel="icon" type="image/png" href="favicon.png">
+    
+    <!-- Open Graph Meta Tags for Social Media -->
+    <meta property="og:title" content="Satya Pal Singh - State Awarded Teacher">
+    <meta property="og:description" content="राज्य पुरस्कृत शिक्षक | राष्ट्रीय अधिवेशन पर्यावरण चिन्ह अवार्ड विजेता | 1352 Posts • 5.1K Friends">
+    <meta property="og:image" content="https://satyapalsinghfb.vercel.app/og-image.jpg">
+    <meta property="og:url" content="https://satyapalsinghfb.vercel.app/">
+    <meta property="og:type" content="website">
+    
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Satya Pal Singh - State Awarded Teacher">
+    <meta name="twitter:description" content="राज्य पुरस्कृत शिक्षक | राष्ट्रीय अधिवेशन पर्यावरण चिन्ह अवार्ड विजेता">
+    <meta name="twitter:image" content="https://satyapalsinghfb.vercel.app/og-image.jpg">
+    
+    <!-- Fuse.js for fuzzy search -->
+    <script src="https://cdn.jsdelivr.net/npm/fuse.js@7.0.0"></script>
+    
+    <link rel="stylesheet" href="facebook_complete.css">
+    <script src="facebook_complete.js"></script>
+</head>
+<body style="overscroll-behavior-y: contain;">
+    <!-- Navigation Bar -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-left">
+                <span class="logo">facebook</span>
+            </div>
+            <div class="nav-center">
+                <input type="text" id="searchInput" class="search-bar" placeholder="Search Facebook" />
+                <div id="searchResults" class="search-results"></div>
+            </div>
+            <div class="nav-right">
+                <div class="nav-icon">🏠</div>
+                <div class="nav-icon">📺</div>
+                <div class="nav-icon">👥</div>
+                <div class="nav-icon">🔔</div>
+                <div class="nav-icon">⚙️</div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Profile Header -->
+    <header class="profile-header">
+        <div class="cover-photo">
+            <img src="cover.jpg" class="lazy" loading="lazy" alt="Cover Photo" onerror="this.style.display='none'" />
+        </div>
+        <div class="profile-info-container">
+            <div class="profile-picture">
+                <img src="profile.jpg" class="lazy" loading="lazy" alt="Profile Picture" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22168%22 height=%22168%22%3E%3Crect fill=%22%23ddd%22/%3E%3C/svg%3E'" />
+            </div>
+            <div class="profile-details">
+                <h1 class="profile-name">
+                    <a href="https://facebook.com/satyapal.28" target="_blank" rel="noopener noreferrer">Satya Pal Singh</a>
+                </h1>
+                <div class="profile-stats">
+                    <span>📝 <strong id="totalPosts">0</strong> Posts</span>
+                    <span>👥 <strong>5.1K</strong> Friends</span>
+                    <span>📸 <strong>10K</strong> Photos</span>
+                </div>
+            </div>
+        </div>
+        <div class="profile-nav">
+            <button class="profile-tab active">Posts</button>
+            <button class="profile-tab">About</button>
+            <button class="profile-tab">Reels</button>
+            <button class="profile-tab">Photos</button>
+            <button class="profile-tab">Events</button>
+            <button class="profile-tab">Friends</button>
+            <button class="profile-tab">More</button>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="main-container">
+        <aside class="left-sidebar">
+            <!-- Intro Card -->
+            <div class="sidebar-card">
+                <h3 class="sidebar-title">Intro</h3>
+                <div class="intro-bio">
+                    राज्य पुरस्कृत शिक्षक<br />
+                    राष्ट्रीय अधियन पर्यावरण चिन्ह अवार्ड विजेता<br />
+                    राज्य आईसीटी अवार्ड विजेता
+                </div>
+                <div class="intro-list">
+                    <div class="intro-item">
+                        <svg class="intro-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M20 6h-4V4c0-1.11-.89-2-2-2h-4c-1.11 0-2 .89-2 2v2H4c-1.11 0-1.99.89-1.99 2L2 19c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2zm-6 0h-4V4h4v2z" />
+                        </svg>
+                        <span>Works at <strong>J.H.S. Kagarol 1</strong></span>
+                    </div>
+                    <div class="intro-item">
+                        <svg class="intro-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82zM12 3L1 9l11 6 9-4.91V17h2V9L12 3z" />
+                        </svg>
+                        <span>Studied at <strong>St. Johns College, Agra, UP, India</strong></span>
+                    </div>
+                    <div class="intro-item">
+                        <svg class="intro-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
+                        </svg>
+                        <span>Lives in <strong>Agra, Uttar Pradesh</strong></span>
+                    </div>
+                    <div class="intro-item">
+                        <svg class="intro-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M12 12c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm6-1.8C18 6.57 15.35 4 12 4s-6 2.57-6 6.2c0 2.34 1.95 5.44 6 9.14 4.05-3.7 6-6.8 6-9.14zM12 2c4.2 0 8 3.22 8 8.2 0 3.32-2.67 7.25-8 11.8-5.33-4.55-8-8.48-8-11.8C4 5.22 7.8 2 12 2z" />
+                        </svg>
+                        <span>From <strong>Agra, Uttar Pradesh</strong></span>
+                    </div>
+                    <div class="intro-item">
+                        <svg class="intro-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
+                        </svg>
+                        <span><strong>Married</strong></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PHOTOS CARD -->
+            <div class="sidebar-card">
+                <div class="sidebar-header">
+                    <h3 class="sidebar-title">Photos</h3>
+                    <a href="#" class="see-all">See all photos</a>
+                </div>
+                <div class="photo-grid" id="photoGrid"><!-- Photos will be loaded from posts --></div>
+            </div>
+
+            <!-- YEAR FILTER -->
+            <div class="sidebar-card">
+                <h3 class="sidebar-title">📅 Filter by Year</h3>
+                <select id="yearFilter" class="year-select">
+                    <option value="all">All Years</option>
+                </select>
+            </div>
+        </aside>
+
+        <!-- FEED CENTER -->
+        <section class="main-feed">
+            <div id="postsContainer"></div>
+            <div id="loadingIndicator" style="display:none;text-align:center;padding:24px;">
+                <span>Loading posts...</span>
+            </div>
+        </section>
+    </main>
+
+    <!-- SCRIPTS -->
+    <script src="facebook_complete.js"></script>
+</body>
+</html>

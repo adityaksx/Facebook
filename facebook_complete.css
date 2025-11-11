@@ -1602,3 +1602,24 @@ body.modal-open {
         transform: none;
     }
 }
+
+.search-results {
+    font-size: 14px;
+    color: #65676b;
+    padding: 8px 12px;
+    text-align: center;
+}
+
+#searchInput {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 20px;
+    font-size: 15px;
+}
+
+#searchInput:focus {
+    outline: none;
+    border-color: #1877f2;
+    box-shadow: 0 0 0 2px rgba(24, 119, 242, 0.2);
+}

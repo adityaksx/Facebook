@@ -885,6 +885,7 @@ function convertGoogleDriveUrl(url) {
 // ============================================
 
 function openImageModal(imageSrc, allImages) {
+    window._scrollY = window.scrollY || window.pageYOffset;
     const modal = document.getElementById('imageModal');
     const modalImage = document.getElementById('modalImage');
     const imageCounter = document.getElementById('imageCounter');

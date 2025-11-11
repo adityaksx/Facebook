@@ -1623,3 +1623,42 @@ body.modal-open {
     border-color: #1877f2;
     box-shadow: 0 0 0 2px rgba(24, 119, 242, 0.2);
 }
+
+/* Facebook-style Translation */
+.translation-container {
+    margin-top: 8px;
+}
+
+.translation-link {
+    color: #65676b;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    padding: 4px 0;
+    display: inline-block;
+}
+
+.translation-link:hover {
+    text-decoration: underline;
+}
+
+.translated-text {
+    background: #f0f2f5;
+    border-left: 3px solid #1877f2;
+    padding: 12px;
+    margin-top: 8px;
+    border-radius: 8px;
+    font-size: 15px;
+    color: #050505;
+    line-height: 1.3333;
+}
+
+/* .translated-text::before {
+    content: 'Must watch this video before coming to the Academy';
+    font-weight: 600;
+    display: block;
+    margin-bottom: 4px;
+    color: #65676b;
+    font-size: 13px;
+}
+*/

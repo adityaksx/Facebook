@@ -206,6 +206,9 @@ function createPostCard(post) {
         textDiv.innerHTML = processHashtags(cleanedContent);
         contentDiv.appendChild(textDiv);
         card.appendChild(contentDiv);
+
+        // Facebook-style translation
+        addTranslationFeature(card, cleanedContent);
     }
 
     // IMAGES (Facebook Grid Layout + Lightbox Support)
@@ -1065,21 +1068,30 @@ function initializeSearch() {
             { name: 'searchableDate', weight: 0.2 },
             { name: 'location', weight: 0.1 }
         ],
-        threshold: 0.4,           // Balanced - not too strict, not too fuzzy
-        distance: 200,
+        threshold: 0.3,           // Balanced - not too strict, not too fuzzy
+        distance: 100,
         minMatchCharLength: 2,
         ignoreLocation: true,
         includeScore: true,
         shouldSort: true,
-        useExtendedSearch: false
+        useExtendedSearch: true,
     };
 
     fuseInstance = new Fuse(searchablePosts, fuseOptions);
     console.log('✅ Search initialized with', allPosts.length, 'posts');
 }
 
-// Improved search handler
-function handleSearch(searchTerm) {
+// Utility: Translate user query using Google Translate API
+async function translateQuery(query, targetLang) {
+    const response = await fetch(
+        `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${targetLang}&dt=t&q=${encodeURIComponent(query)}`
+    );
+    const data = await response.json();
+    return data[0][0][0];
+}
+
+// Main dual-language search handler
+async function handleSearch(searchTerm) {
     if (!searchTerm || searchTerm.trim() === '') {
         filteredPosts = [...allPosts];
         currentPage = 0;
@@ -1089,18 +1101,34 @@ function handleSearch(searchTerm) {
         return;
     }
 
-    // Perform fuzzy search
-    const results = fuseInstance.search(searchTerm);
-    filteredPosts = results.map(result => result.item);
-    
+    let term = searchTerm.trim();
+    const resultMap = new Map();
+
+    // 1. Search the user's input (Hindi/English/numbers/anything)
+    let results = fuseInstance.search(term);
+    results.forEach(r => resultMap.set(r.item.timestamp + (r.item.content || ''), r.item));
+
+    // 2. Search Hindi translation (as normal text)
+    const hindiQuery = await translateQuery(term, 'hi');
+    if (hindiQuery && hindiQuery !== term) {
+        let hRes = fuseInstance.search(hindiQuery);
+        hRes.forEach(r => resultMap.set(r.item.timestamp + (r.item.content || ''), r.item));
+    }
+
+    // 3. Search English translation (as normal text)
+    const englishQuery = await translateQuery(term, 'en');
+    if (englishQuery && englishQuery !== term && englishQuery !== hindiQuery) {
+        let eRes = fuseInstance.search(englishQuery);
+        eRes.forEach(r => resultMap.set(r.item.timestamp + (r.item.content || ''), r.item));
+    }
+
+    filteredPosts = Array.from(resultMap.values());
     currentPage = 0;
     document.getElementById('postsContainer').innerHTML = '';
     renderPosts();
     updateSearchResults(filteredPosts.length, searchTerm);
-    
-    // Debug log
-    console.log(`Search for "${searchTerm}": found ${filteredPosts.length} posts`);
 }
+
 
 // Update UI with search results
 function updateSearchResults(count, searchTerm) {
@@ -1142,4 +1170,108 @@ function setupSearch() {
     });
 
     console.log('✅ Search listeners attached');
+}
+
+// ============================================
+// FACEBOOK-STYLE TRANSLATION
+// ============================================
+
+// Cache for translations (avoid re-translating)
+const translationCache = {};
+
+// Detect if text contains Hindi
+function containsHindi(text) {
+    return /[\u0900-\u097F]/.test(text);
+}
+
+// Translate using Google Translate API (free, no key needed)
+async function translateToEnglish(text) {
+    // Check cache first
+    if (translationCache[text]) {
+        return translationCache[text];
+    }
+
+    try {
+        const response = await fetch(
+            `https://translate.googleapis.com/translate_a/single?client=gtx&sl=hi&tl=en&dt=t&q=${encodeURIComponent(text)}`
+        );
+        const data = await response.json();
+        const translated = data[0].map(item => item[0]).join('');
+        
+        // Cache the result
+        translationCache[text] = translated;
+        return translated;
+    } catch (error) {
+        console.error('Translation error:', error);
+        return null;
+    }
+}
+
+// Add translation UI to post
+function addTranslationFeature(postElement, originalText) {
+    if (!originalText || !containsHindi(originalText)) {
+        return; // No Hindi text, skip
+    }
+
+    const contentDiv = postElement.querySelector('.post-content');
+    
+    // Create translation container
+    const translationContainer = document.createElement('div');
+    translationContainer.className = 'translation-container';
+    
+    // Create "See translation" link
+    const seeTranslationLink = document.createElement('div');
+    seeTranslationLink.className = 'translation-link';
+    seeTranslationLink.innerHTML = '⚙️ See translation';
+    seeTranslationLink.style.display = 'block';
+    
+    // Create translated text div (hidden initially)
+    const translatedDiv = document.createElement('div');
+    translatedDiv.className = 'translated-text';
+    translatedDiv.style.display = 'none';
+    
+    // Create "Hide original" link
+    const hideOriginalLink = document.createElement('div');
+    hideOriginalLink.className = 'translation-link';
+    hideOriginalLink.innerHTML = '⚙️ Hide original · Rate this translation';
+    hideOriginalLink.style.display = 'none';
+    
+    // Click handler for "See translation"
+    seeTranslationLink.onclick = async function() {
+        seeTranslationLink.innerHTML = '⚙️ Translating...';
+        
+        const translation = await translateToEnglish(originalText);
+        
+        if (translation) {
+            translatedDiv.innerHTML = translation.replace(/\n/g, '<br>');
+            translatedDiv.style.display = 'block';
+            seeTranslationLink.style.display = 'none';
+            hideOriginalLink.style.display = 'block';
+        } else {
+            seeTranslationLink.innerHTML = '⚙️ Translation failed';
+        }
+    };
+    
+    // Click handler for "Hide original"
+    hideOriginalLink.onclick = function() {
+        const isHidden = contentDiv.style.display === 'none';
+        
+        if (isHidden) {
+            // Show original
+            contentDiv.style.display = 'block';
+            hideOriginalLink.innerHTML = '⚙️ Hide original · Rate this translation';
+        } else {
+            // Hide original
+            contentDiv.style.display = 'none';
+            hideOriginalLink.innerHTML = '⚙️ Show original · Rate this translation';
+        }
+    };
+    
+    // Append elements
+    translationContainer.appendChild(seeTranslationLink);
+    translationContainer.appendChild(translatedDiv);
+    translationContainer.appendChild(hideOriginalLink);
+    
+    // Insert after content
+    contentDiv.parentNode.insertBefore(translationContainer, contentDiv.nextSibling);
 }

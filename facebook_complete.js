@@ -812,12 +812,22 @@ function setupImageModal() {
         document.body.classList.remove('modal-open');  // ← ADD THIS LINE
         document.body.style.overflow = 'auto';
         modalImg.src = '';
+
+        // Restore scroll position
+        if (window._scrollY !== undefined) {
+            setTimeout(() => {
+                window.scrollTo(0, window._scrollY);
+            }, 0);
+        }
     }
     
     overlay.onclick = closeModal;
     container.onclick = (e) => e.stopPropagation();
     
     window.openImageModal = function(src, imagesList = [src]) {
+        // Save current scroll position
+        window._scrollY = window.scrollY || window.pageYOffset;
+
         imageArray = imagesList.slice();
         currentIdx = imageArray.indexOf(src);
         if (currentIdx < 0) currentIdx = 0;
@@ -932,6 +942,7 @@ function openImageModal(imageSrc, allImages) {
     // Update navigation buttons
     updateNavButtons();
 }
+
 
 function showImage(index) {
     const modalImage = document.getElementById('modalImage');

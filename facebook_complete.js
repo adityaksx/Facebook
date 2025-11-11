@@ -849,6 +849,10 @@ function setupImageModal() {
                 window.scrollTo(0, window._scrollY);
             }, 0);
         }
+        if (window.history.state && window.history.state.modalOpen) {
+            history.back();
+        }
+
     }
     
     overlay.onclick = closeModal;
@@ -862,6 +866,7 @@ function setupImageModal() {
         currentIdx = imageArray.indexOf(src);
         if (currentIdx < 0) currentIdx = 0;
         modal.style.display = 'flex';
+        history.pushState({ modalOpen: true }, '');
         document.body.classList.add('modal-open');  // ← ADD THIS LINE
         modalImg.src = imageArray[currentIdx];
         updateUI();
@@ -869,6 +874,14 @@ function setupImageModal() {
         preloadImage(currentIdx - 1);
         document.body.style.overflow = 'hidden';
     };
+    window.addEventListener('popstate', function(e) {
+        if (modal.style.display === 'flex') {
+            modal.style.display = 'none';
+            document.body.style.overflow = 'auto';
+            modalImg.src = '';
+        }
+    });
+
 }
 
 console.log('Facebook Complete JS Loaded');

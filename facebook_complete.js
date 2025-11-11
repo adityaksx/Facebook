@@ -844,16 +844,15 @@ function setupImageModal() {
         document.body.style.overflow = 'auto';
         modalImg.src = '';
 
+        // Only trigger history navigation
+        if (window.history.state && window.history.state.modalOpen) {
+            history.back();
+        }
         // Restore scroll position after modal close
         if (typeof window.lastScrollY !== 'undefined') {
             setTimeout(function() {
                 window.scrollTo(0, window.lastScrollY);
             }, 0);
-        }
-
-        // Go back in history if modal was opened through pushState
-        if (window.history.state && window.history.state.modalOpen) {
-            history.back();
         }
     }
 
@@ -883,8 +882,16 @@ function setupImageModal() {
             modal.style.display = 'none';
             document.body.style.overflow = 'auto';
             modalImg.src = '';
-        }
-    });
+
+            // Restore scroll position reliably after modal close
+            setTimeout(function() {
+                if (typeof window.lastScrollY !== 'undefined') {
+                    window.scrollTo(0, window.lastScrollY);
+                }
+            }, 0);
+        }   
+    }); 
+
 
 }
 

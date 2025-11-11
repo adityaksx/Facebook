@@ -1275,8 +1275,14 @@ body.modal-open {
         font-size: 24px;
     }
 
+    .nav-center {
+        max-width: 220px;
+    }
+
     .nav-center .search-bar {
-        width: 180px;
+        width: 100%;
+        min-width: 100px;
+        max-width: 220px;
         font-size: 14px;
         padding: 8px 12px;
     }

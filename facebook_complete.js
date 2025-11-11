@@ -878,19 +878,23 @@ function setupImageModal() {
         document.body.style.overflow = 'hidden';
     };
     window.addEventListener('popstate', function(e) {
-        if (modal.style.display === 'flex') {
+        if (window.history.state && window.history.state.modalOpen) {
+            // Only close the modal, restore scroll, etc.
             modal.style.display = 'none';
             document.body.style.overflow = 'auto';
             modalImg.src = '';
-
-            // Restore scroll position reliably after modal close
             setTimeout(function() {
                 if (typeof window.lastScrollY !== 'undefined') {
                     window.scrollTo(0, window.lastScrollY);
                 }
-            }, 0);
-        }   
-    }); 
+            }, 40);
+            return; // STOP further handling
+        }
+
+        // Only below this line: do your normal navigation, rerender, reload, etc
+        // For example:
+        // renderPosts();   
+    });
 
 
 }
@@ -949,7 +953,9 @@ function convertGoogleDriveUrl(url) {
 // ============================================
 
 function openImageModal(imageSrc, allImages) {
-    window._scrollY = window.scrollY || window.pageYOffset;
+    window.lastScrollY = window.scrollY || window.pageYOffset;
+    history.pushState({ modalOpen: true }, '');
+
     const modal = document.getElementById('imageModal');
     const modalImage = document.getElementById('modalImage');
     const imageCounter = document.getElementById('imageCounter');

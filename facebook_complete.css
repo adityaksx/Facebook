@@ -71,8 +71,16 @@ img {
     font-weight: bold;
     font-family: 'Helvetica', sans-serif;
 }
-
+.nav-center {
+    display: flex;
+    align-items: center; /* Ensures vertical alignment for the search bar */
+    justify-content: center;
+    flex: 1;
+    max-width: 400px; 
+    margin: 0 auto;
+}
 .nav-center .search-bar {
+    align-items: center;
     padding: 10px 16px;
     border-radius: 50px;
     border: none;

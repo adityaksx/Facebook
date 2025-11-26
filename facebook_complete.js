@@ -1,3 +1,8 @@
+// Supabase client
+const supabaseUrl = window.SUPABASE_URL;
+const supabaseAnonKey = window.SUPABASE_ANON_KEY;
+const supabaseClient = window.supabase.createClient(supabaseUrl, supabaseAnonKey);
+
 const JSON_DATA_FOLDER = 'facebook_json_data';
 const AVAILABLE_YEARS = [2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025];
 
@@ -5,6 +10,38 @@ let allPosts = [];
 let filteredPosts = [];
 let currentPage = 0;
 const POSTS_PER_PAGE = 10;
+// Translation rate limiting
+let translationRequestCount = 0;
+const MAX_TRANSLATIONS_PER_MINUTE = 10;
+
+
+// ============================================
+// SECURITY: XSS Protection (IMPROVED VERSION)
+// ============================================
+/**
+ * Sanitizes HTML to prevent XSS attacks while preserving safe formatting tags
+ * @param {string} str - The string to sanitize
+ * @returns {string} - Sanitized HTML-safe string with allowed tags preserved
+ */
+function sanitizeHTML(str) {
+    if (!str) return '';
+    
+    // First, escape ALL HTML
+    const temp = document.createElement('div');
+    temp.textContent = str;
+    let sanitized = temp.innerHTML;
+    
+    // Then, restore SAFE <br> tags
+    // This converts &lt;br&gt; back to <br>
+    sanitized = sanitized
+        .replace(/&lt;br&gt;/gi, '<br>')
+        .replace(/&lt;br\/&gt;/gi, '<br>')
+        .replace(/&lt;br \/&gt;/gi, '<br>');
+    
+    return sanitized;
+}
+
+
 
 // Debounce function
 function debounce(func, wait) {
@@ -42,6 +79,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
 function setupYearFilter() {
     const yearFilter = document.getElementById('yearFilter');
+    if (!yearFilter) return;  // ADD: Null check
+    
+    // ADD: Clear existing options to prevent duplicates
+    yearFilter.innerHTML = '<option value="all">All Years</option>';
+
     AVAILABLE_YEARS.forEach(year => {
         const option = document.createElement('option');
         option.value = year;
@@ -64,37 +106,95 @@ function setupYearFilter() {
     });
 }
 
+// ---------- COMPLETE loadAllPosts() WITH PAGINATION ----------
 async function loadAllPosts() {
     const loadingDiv = document.getElementById('loadingIndicator');
-    loadingDiv.style.display = 'block';
+    if (loadingDiv) loadingDiv.style.display = 'block';
 
-    const promises = AVAILABLE_YEARS.map(year =>
-        fetch(`${JSON_DATA_FOLDER}/posts_${year}.json`)
-            .then(res => res.ok ? res.json() : null)
-            .catch(() => null)
-    );
+    // Fetch ALL posts using pagination
+    let allFetchedPosts = [];
+    let page = 0;
+    const PAGE_SIZE = 1000;
+    let hasMore = true;
 
-    const results = await Promise.all(promises);
-    allPosts = [];
-    results.forEach(data => {
-        if (data && data.posts) {
-            allPosts.push(...data.posts);
+    while (hasMore) {
+        const { data, error } = await supabaseClient
+            .from('posts')
+            .select(`
+                id,
+                timestamp,
+                type,
+                content,
+                images:images ( url ),
+                post_links:post_links ( url ),
+                post_videos:post_videos ( url )
+            `)
+            .order('timestamp', { ascending: false })
+            .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
+
+        if (error) {
+            console.error('Error loading posts from Supabase:', error);
+            if (loadingDiv) {
+                loadingDiv.textContent = 'Error loading posts.';
+            }
+            break;
         }
+
+        if (data && data.length > 0) {
+            allFetchedPosts = allFetchedPosts.concat(data);
+            console.log(`Loaded page ${page + 1}: ${data.length} posts (Total: ${allFetchedPosts.length})`);
+            page++;
+            hasMore = data.length === PAGE_SIZE;
+        } else {
+            hasMore = false;
+        }
+    }
+
+    // Map DB rows into the same shape your old JSON posts had
+    allPosts = (allFetchedPosts || []).map(p => {
+        const images = (p.images || []).map(img => img.url);
+        const links = (p.post_links || []).map(l => l.url);
+        const videos = (p.post_videos || []).map(v => v.url);
+        const ts = p.timestamp ? new Date(p.timestamp) : null;
+
+        const dateStr = ts ? ts.toLocaleString('en-IN', {
+            year: 'numeric',
+            month: 'short',
+            day: '2-digit',
+            hour: 'numeric',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: true
+        }) : '';
+
+        return {
+            id: p.id,
+            timestamp: p.timestamp,
+            type: p.type || '',
+            content: p.content || '',
+            images,
+            videos,
+            links,
+            date: dateStr
+        };
     });
 
-    allPosts.sort((a, b) => new Date(b.timestamp || b.date) - new Date(a.timestamp || a.date));
     filteredPosts = [...allPosts];
 
-    loadingDiv.style.display = 'none';
-    document.getElementById('totalPosts').textContent = allPosts.length;
+    if (loadingDiv) loadingDiv.style.display = 'none';
 
-    // Initialize search AFTER posts are loaded
-    initializeSearch();
-    setupSearch();
+    const totalPostsEl = document.getElementById('totalPosts');
+    if (totalPostsEl) totalPostsEl.textContent = allPosts.length;
 
-    renderPosts();
-    loadPhotoGrid();
+    console.log(`Successfully loaded ${allPosts.length} total posts`);
+
+    if (typeof initializeSearch === 'function') initializeSearch();
+    if (typeof setupSearch === 'function') setupSearch();
+    if (typeof renderPosts === 'function') renderPosts();
+    if (typeof loadPhotoGrid === 'function') loadPhotoGrid();
 }
+
+
 
 
 function renderPosts() {
@@ -103,6 +203,11 @@ function renderPosts() {
     const end = start + POSTS_PER_PAGE;
     const postsToRender = filteredPosts.slice(start, end);
 
+    if (!container) {
+        console.error('Posts container not found');
+        return;
+    }
+    
     if (postsToRender.length === 0 && currentPage === 0) {
         container.innerHTML = '<div class="no-posts"><p>No posts to display</p></div>';
         return;
@@ -203,7 +308,7 @@ function createPostCard(post) {
 
         const textDiv = document.createElement('div');
         textDiv.className = 'post-text';
-        textDiv.innerHTML = processHashtags(cleanedContent);
+        textDiv.innerHTML = processHashtags(sanitizeHTML(cleanedContent));
         contentDiv.appendChild(textDiv);
         card.appendChild(contentDiv);
 
@@ -1214,26 +1319,43 @@ function containsHindi(text) {
 
 // Translate using Google Translate API (free, no key needed)
 async function translateToEnglish(text) {
-    // Check cache first
-    if (translationCache[text]) {
-        return translationCache[text];
+    if (translationCache[text]) return translationCache[text];
+    
+    // ADD: Check rate limit
+    if (translationRequestCount >= MAX_TRANSLATIONS_PER_MINUTE) {
+        console.warn('Translation rate limit reached');
+        return '⏳ Translation limit reached. Please wait...';
     }
-
+    
+    // ADD: Increment counter and reset after 1 minute
+    translationRequestCount++;
+    setTimeout(() => translationRequestCount--, 60000);
+    
     try {
         const response = await fetch(
-            `https://translate.googleapis.com/translate_a/single?client=gtx&sl=hi&tl=en&dt=t&q=${encodeURIComponent(text)}`
-        );
-        const data = await response.json();
-        const translated = data[0].map(item => item[0]).join('');
+            `https://translate.googleapis.com/translate_a/single?client=gtx&sl=hi&tl=en&dt=t&q=${encodeURIComponent(text)}`);
         
-        // Cache the result
+        // ADD: Check if response is OK
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        
+        // ADD: Validate data structure
+        if (!data || !data[0]) {
+            throw new Error('Invalid translation response');
+        }
+        
+        const translated = data[0].map(item => item[0]).join('');
         translationCache[text] = translated;
         return translated;
     } catch (error) {
         console.error('Translation error:', error);
-        return null;
+        return '⚠️ Translation unavailable. Please try again later.';
     }
 }
+
 
 // Add translation UI to post
 function addTranslationFeature(postElement, originalText) {
@@ -1271,7 +1393,7 @@ function addTranslationFeature(postElement, originalText) {
         const translation = await translateToEnglish(originalText);
         
         if (translation) {
-            translatedDiv.innerHTML = translation.replace(/\n/g, '<br>');
+            translatedDiv.innerHTML = sanitizeHTML(translation).replace(/\n/g, '<br>');
             translatedDiv.style.display = 'block';
             seeTranslationLink.style.display = 'none';
             hideOriginalLink.style.display = 'block';

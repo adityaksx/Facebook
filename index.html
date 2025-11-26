@@ -39,7 +39,7 @@
     
     <!-- Fuse.js for fuzzy search -->
     <script src="https://cdn.jsdelivr.net/npm/fuse.js@7.0.0"></script>
-    
+
     <link rel="stylesheet" href="facebook_complete.css">
 </head>
 <body style="overscroll-behavior-y: contain;">
@@ -168,6 +168,16 @@
 
     <!-- SCRIPTS -->
     <script src="https://cdn.jsdelivr.net/npm/fuse.js/dist/fuse.min.js"></script>
-    <script src="facebook_complete.js"></script>
+    <!--  Supabase client library -->
+   <script src="https://unpkg.com/@supabase/supabase-js@2.47.0/dist/umd/supabase.js"></script>
+
+   <!-- Your project config -->
+   <script>
+     window.SUPABASE_URL = "https://juznwjbznnlccdhhcpso.supabase.co";
+     window.SUPABASE_ANON_KEY = "sb_publishable_RSXulp5PrlLVmcWnfPrl9A_T_-e_arT";
+   </script>
+
+   <!-- Your main script (must be last) -->
+   <script src="facebook_complete.js" defer></script>
 </body>
 </html>

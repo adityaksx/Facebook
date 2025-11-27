@@ -15,6 +15,32 @@ let translationRequestCount = 0;
 const MAX_TRANSLATIONS_PER_MINUTE = 10;
 
 // ============================================
+// SECURITY: XSS Protection (IMPROVED VERSION)
+// ============================================
+/**
+ * Sanitizes HTML to prevent XSS attacks while preserving safe formatting tags
+ * @param {string} str - The string to sanitize
+ * @returns {string} - Sanitized HTML-safe string with allowed tags preserved
+ */
+function sanitizeHTML(str) {
+    if (!str) return '';
+    
+    // First, escape ALL HTML
+    const temp = document.createElement('div');
+    temp.textContent = str;
+    let sanitized = temp.innerHTML;
+    
+    // Then, restore SAFE <br> tags
+    // This converts &lt;br&gt; back to <br>
+    sanitized = sanitized
+        .replace(/&lt;br&gt;/gi, '<br>')
+        .replace(/&lt;br\/&gt;/gi, '<br>')
+        .replace(/&lt;br \/&gt;/gi, '<br>');
+    
+    return sanitized;
+}
+
+// ============================================
 // USER TRACKING & SESSION MANAGEMENT
 // ============================================
 
@@ -46,6 +72,7 @@ function getUsername() {
 async function logUserActivity(action, postId) {
     const userId = getUserId();
     const username = getUsername();
+    const sessionStart = localStorage.getItem('fb_session_start'); 
     console.log('User Activity:', {
         userId,
         username,
@@ -72,31 +99,7 @@ async function logUserActivity(action, postId) {
     // You can extend this to send to a user_activity table if needed
 }
 
-// ============================================
-// SECURITY: XSS Protection (IMPROVED VERSION)
-// ============================================
-/**
- * Sanitizes HTML to prevent XSS attacks while preserving safe formatting tags
- * @param {string} str - The string to sanitize
- * @returns {string} - Sanitized HTML-safe string with allowed tags preserved
- */
-function sanitizeHTML(str) {
-    if (!str) return '';
-    
-    // First, escape ALL HTML
-    const temp = document.createElement('div');
-    temp.textContent = str;
-    let sanitized = temp.innerHTML;
-    
-    // Then, restore SAFE <br> tags
-    // This converts &lt;br&gt; back to <br>
-    sanitized = sanitized
-        .replace(/&lt;br&gt;/gi, '<br>')
-        .replace(/&lt;br\/&gt;/gi, '<br>')
-        .replace(/&lt;br \/&gt;/gi, '<br>');
-    
-    return sanitized;
-}
+
 
 
 
@@ -205,6 +208,7 @@ async function loadAllPosts() {
         } else {
             hasMore = false;
         }
+
     }
 
     // Map DB rows into the same shape your old JSON posts had
@@ -274,6 +278,7 @@ function renderPosts() {
     const fragment = document.createDocumentFragment();
     postsToRender.forEach((post) => {
         const postCard = createPostCard(post);
+        postCard.setAttribute('data-post-id', post.id);
         fragment.appendChild(postCard);
     });
 
@@ -301,55 +306,15 @@ function renderPosts() {
     currentPage++;
 }
 
-// ============================================
-// LIKE HANDLING FUNCTION
-// ============================================
-async function handleLike(postId, buttonElement) {
-    const userId = getUserId();
-    const username = getUsername();
-  
-    // Add animation class
-    buttonElement.classList.add('liked');
-    buttonElement.style.color = '#1877f2';
-  
-    // Animate
-    buttonElement.style.transform = 'scale(1.2)';
-    setTimeout(() => {
-        buttonElement.style.transform = 'scale(1)';
-    }, 200);
-  
-    try {
-        const { data, error } = await supabaseClient
-        .from('likes')
-        .insert([{
-            post_id: postId,
-            user_id: userId,
-            username: username,
-            created_at: new Date().toISOString()
-        }]);
-    
-        if (error) {
-            console.error('Error inserting like:', error);
-            alert('Could not save like. Please try again.');
-            buttonElement.classList.remove('liked');
-            buttonElement.style.color = '#65676b';
-        } else {
-            console.log('Like saved successfully');
-            logUserActivity('LIKE', postId);
-        }
-    } catch (err) {
-        console.error('Like error:', err);
-    }
-}
 
 async function loadLikeCount(postId, element) {
     try {
         // Fetch all likes for this post
         const { data, error, count } = await supabaseClient
-        .from('likes')
-        .select('id, username, created_at, user_id', { count: 'exact' })
-        .eq('post_id', postId)
-        .order('created_at', { ascending: false });
+            .from('likes')
+            .select('id, username, created_at, user_id', { count: 'exact' })
+            .eq('post_id', postId)
+            .order('created_at', { ascending: false });
     
         if (error) {
             console.error('Error loading likes:', error);
@@ -360,26 +325,31 @@ async function loadLikeCount(postId, element) {
         const likeCount = count || 0;
     
         if (likeCount === 0) {
-        element.innerHTML = '👍 <strong>0 Likes</strong>';
-        element.style.cursor = 'default';
-        return;
+            element.innerHTML = '👍 <strong>0 Likes</strong>';
+            element.style.cursor = 'default';
+            element.onclick = null; // Remove click handler when no likes
+            console.log('✅ No likes for post:', postId);
+            return;
         }
     
+        // Update the blue box with current count
         element.innerHTML = `👍 <strong>${likeCount} Like${likeCount !== 1 ? 's' : ''}</strong> | <span class="view-likes-link">Click to see who liked</span>`;
         element.style.cursor = 'pointer';
     
+        // Add click handler to show who liked
         element.onclick = function(e) {
             e.stopPropagation();
             showLikeDetails(postId, data);
         };
     
-        console.log(`Loaded ${likeCount} likes for post ${postId}`);
+        console.log(`✅ Loaded ${likeCount} likes for post ${postId}`);
     
     } catch (err) {
         console.error('Like count error:', err);
         element.innerHTML = '❌ Error loading likes';
     }
 }
+
 
 
 function showLikeDetails(postId, likes) {
@@ -489,32 +459,50 @@ window.deleteComment = deleteComment;
 
 
 async function submitComment(postId, message, containerElement) {
-  const userId = getUserId();
-  const username = getUsername();
-  
-  try {
-    const { data, error } = await supabaseClient
-      .from('comments')
-      .insert([{
-        post_id: postId,
-        username: username,
-        message: message,
-        created_at: new Date().toISOString()
-      }]);
+    const userId = getUserId();
+    const username = getUsername();
     
-    if (error) {
-      console.error('Error inserting comment:', error);
-      alert('Could not post comment. Please try again.');
-    } else {
-      console.log('Comment posted successfully');
-      logUserActivity('COMMENT', postId);
-      // Reload comments
-      loadComments(postId, containerElement);
+    try {
+        const { data, error } = await supabaseClient
+            .from('comments')
+            .insert([{
+                post_id: postId,
+                username: username,
+                message: message,
+                created_at: new Date().toISOString()
+            }]);
+        
+        if (error) {
+            console.error('Error inserting comment:', error);
+            alert('Could not post comment. Please try again.');
+        } else {
+            console.log('✅ Comment posted successfully');
+            logUserActivity('COMMENT', postId);
+            
+            // ✅ UPDATE COMMENT COUNT
+            const { count } = await supabaseClient
+                .from('comments')
+                .select('*', { count: 'exact', head: true })
+                .eq('post_id', postId);
+            
+            // Find the post card and update comment count
+            const postCard = document.querySelector(`.post-card[data-post-id="${postId}"]`);
+            if (postCard) {
+                const commentSpan = postCard.querySelector('.comment-count');
+                if (commentSpan) {
+                    commentSpan.textContent = count || 0;
+                    console.log('✅ Updated comment count to:', count);
+                }
+            }
+            
+            // Reload comments list
+            loadComments(postId, containerElement);
+        }
+    } catch (err) {
+        console.error('Comment error:', err);
     }
-  } catch (err) {
-    console.error('Comment error:', err);
-  }
 }
+
 
 // ============================================
 // ADMIN POST MANAGEMENT FUNCTIONS
@@ -671,6 +659,7 @@ window.deletePost = deletePost;
 function createPostCard(post) {
     const card = document.createElement('div');
     card.className = 'post-card';
+    card.setAttribute('data-post-id', post.id);
 
     // HEADER
     const header = document.createElement('div');
@@ -889,59 +878,73 @@ function createPostCard(post) {
         card.appendChild(videosDiv);
     }
 
-// LIKE COUNT (Admin only) - DEBUG VERSION
-    console.log('Creating post card, isAdmin:', isAdmin, 'postId:', post.id);
+    // ============================================
+    // STATS - Real counts from database
+    // ============================================
+    const stats = document.createElement('div');
+    stats.className = 'post-stats';
+    stats.setAttribute('data-post-id', post.id); // ✅ ADD THIS LINE
 
-    if (isAdmin) {
-    console.log('Admin detected! Creating like count for post:', post.id);
-  
-    const likeCountDiv = document.createElement('div');
-    likeCountDiv.className = 'admin-like-count';
-    likeCountDiv.innerHTML = '👍 Loading likes...';
-    likeCountDiv.setAttribute('data-post-id', post.id);
-  
-    card.appendChild(likeCountDiv);
-  
-    // Load like count after a small delay
-    setTimeout(() => {
-        console.log('Loading likes for post:', post.id);
-        loadLikeCount(post.id, likeCountDiv);
-    }, 100);
-    }
+    const likesDiv = document.createElement('div');
+    likesDiv.className = 'likes';
+    likesDiv.innerHTML = '👍 <span class="like-count">0</span>';
 
+    const commentsDiv = document.createElement('div');
+    commentsDiv.className = 'comments-shares';
+    commentsDiv.innerHTML = '<span class="comment-count">0</span> Comments';
+
+    stats.appendChild(likesDiv);
+    stats.appendChild(commentsDiv);
+    card.appendChild(stats);
+
+    // Load counts
+    loadPostStats(post.id, likesDiv, commentsDiv);
 
 
     // ============================================
-    // CREATE POST ACTIONS DIV (Like, Comment, Share)
+    // ACTIONS - Interactive buttons
     // ============================================
-    const actionsDiv = document.createElement('div');
-    actionsDiv.className = 'post-actions';
+    const actions = document.createElement('div');
+    actions.className = 'post-actions';
 
-    // LIKE BUTTON with functionality
     const likeBtn = document.createElement('button');
     likeBtn.className = 'action-btn like-btn';
     likeBtn.innerHTML = '<span class="icon">👍</span> Like';
-    likeBtn.setAttribute('data-post-id', post.id);
-    likeBtn.onclick = async function() {
-        await handleLike(post.id, this);
-    };
-    actionsDiv.appendChild(likeBtn);
+    likeBtn.onclick = () => handleLike(post.id, likeBtn, likesDiv);
 
-    // COMMENT BUTTON
     const commentBtn = document.createElement('button');
-    commentBtn.className = 'action-btn comment-btn';
+    commentBtn.className = 'action-btn';
     commentBtn.innerHTML = '<span class="icon">💬</span> Comment';
-    actionsDiv.appendChild(commentBtn);
+    commentBtn.onclick = () => handleComment(post.id, commentsDiv);
 
-    // SHARE BUTTON (placeholder - not functional yet)
     const shareBtn = document.createElement('button');
-    shareBtn.className = 'action-btn share-btn';
-    shareBtn.innerHTML = '<span class="icon">↗</span> Share';
-    actionsDiv.appendChild(shareBtn);
+    shareBtn.className = 'action-btn';
+    shareBtn.innerHTML = '<span class="icon">↗️</span> Share';
+    shareBtn.onclick = () => {
+        navigator.clipboard.writeText(window.location.href);
+        alert('Link copied!');
+    };
 
-    // Add actions to card
-    card.appendChild(actionsDiv);
+    actions.appendChild(likeBtn);
+    actions.appendChild(commentBtn);
+    actions.appendChild(shareBtn);
+    card.appendChild(actions);
 
+    // Check if user liked this post
+    checkUserLiked(post.id, likeBtn);
+
+    // LIKE COUNT (Admin only) - DEBUG VERSION
+    console.log('Creating post card, isAdmin:', isAdmin, 'postId:', post.id);
+
+    if (isAdmin) {
+        console.log('Admin detected! Creating like count for post:', post.id);
+        const likeCountDiv = document.createElement('div');
+        likeCountDiv.className = 'admin-like-count';
+        likeCountDiv.innerHTML = '👍 Loading likes...';
+        likeCountDiv.setAttribute('data-post-id', post.id);
+        card.appendChild(likeCountDiv);
+        loadLikeCount(post.id, likeCountDiv);
+    }
 
     // COMMENTS SECTION
     const commentsSection = document.createElement('div');
@@ -965,17 +968,15 @@ function createPostCard(post) {
 
     card.appendChild(commentsSection);
 
-    // Comment button click handle
-    if (commentBtn) {
-        commentBtn.onclick = function() {
-            const section = card.querySelector('.comments-section');
-            if (section.style.display === 'none') {
-                section.style.display = 'block';
-                loadComments(post.id, commentsList);
-            } else {
-                section.style.display = 'none';
-            }
-        };
+    // Comment button click - ONLY toggle section (no prompt)
+    if (commentBtn) commentBtn.onclick = function() {
+        const section = card.querySelector('.comments-section');
+        if (section.style.display === 'none') {
+            section.style.display = 'block';
+            loadComments(post.id, commentsList);
+        } else {
+            section.style.display = 'none';
+        }
     }
 
     // Comment submit handler
@@ -1572,58 +1573,6 @@ function convertGoogleDriveUrl(url) {
 // IMAGE MODAL/LIGHTBOX FUNCTIONS
 // ============================================
 
-function openImageModal(imageSrc, allImages) {
-    window.lastScrollY = window.scrollY || window.pageYOffset;
-    history.pushState({ modalOpen: true }, '');
-
-    const modal = document.getElementById('imageModal');
-    const modalImage = document.getElementById('modalImage');
-    const imageCounter = document.getElementById('imageCounter');
-    const thumbnailStrip = document.getElementById('thumbnailStrip');
-    
-    // Store all images for navigation
-    window.currentImages = allImages;
-    window.currentImageIndex = allImages.indexOf(imageSrc);
-    
-    // Show modal immediately
-    modal.style.display = 'flex';
-    document.body.classList.add('modal-open');
-    
-    // Force image to be visible and load immediately
-    modalImage.style.opacity = '1';
-    modalImage.style.display = 'block';
-    modalImage.onload = function() {
-        modalImage.style.opacity = '1';
-    };
-    modalImage.src = imageSrc;
-    
-    // Update counter
-    imageCounter.textContent = `${window.currentImageIndex + 1} / ${allImages.length}`;
-    
-    // Generate thumbnails
-    thumbnailStrip.innerHTML = '';
-    allImages.forEach((img, index) => {
-        const thumb = document.createElement('div');
-        thumb.className = 'thumbnail' + (index === window.currentImageIndex ? ' active' : '');
-        
-        const thumbImg = document.createElement('img');
-        thumbImg.src = img;
-        thumbImg.alt = `Image ${index + 1}`;
-        thumb.appendChild(thumbImg);
-        
-        thumb.onclick = (e) => {
-            e.stopPropagation();
-            showImage(index);
-        };
-        
-        thumbnailStrip.appendChild(thumb);
-    });
-    
-    // Update navigation buttons
-    updateNavButtons();
-}
-
-
 function showImage(index) {
     const modalImage = document.getElementById('modalImage');
     const imageCounter = document.getElementById('imageCounter');
@@ -2207,3 +2156,156 @@ async function logoutAdmin() {
     alert('Logged out successfully');
     location.reload();
 }
+
+
+// ==================== LIKE/COMMENT HANDLERS ====================
+
+async function loadPostStats(postId, likesDiv, commentsDiv) {
+    try {
+        const [likes, comments] = await Promise.all([
+            supabaseClient.from('likes').select('*', { count: 'exact', head: true }).eq('post_id', postId),
+            supabaseClient.from('comments').select('*', { count: 'exact', head: true }).eq('post_id', postId)
+        ]);
+        
+        const likeSpan = likesDiv.querySelector('.like-count');
+        const commentSpan = commentsDiv.querySelector('.comment-count');
+        
+        if (likeSpan) likeSpan.textContent = likes.count || 0;
+        if (commentSpan) commentSpan.textContent = comments.count || 0;
+    } catch (err) {
+        console.error('Stats error:', err);
+    }
+}
+
+async function checkUserLiked(postId, likeBtn) {
+    try {
+        const { data } = await supabaseClient
+            .from('likes')
+            .select('id')
+            .eq('post_id', postId)
+            .eq('user_id', getUserId())
+            .maybeSingle();
+        
+        if (data) {
+            likeBtn.classList.add('liked');
+            likeBtn.style.color = '#1877f2';
+            likeBtn.innerHTML = '<span class="icon">👍</span> Liked';
+        }
+    } catch (err) {}
+}
+
+// ==================== IMPROVED LIKE HANDLER WITH DEBOUNCING ====================
+// Track posts currently being liked (prevent spam clicking)
+let likeInProgress = new Set();
+
+async function handleLike(postId, likeBtn, likesDiv) {
+    if (likeInProgress.has(postId)) {
+        console.log('⏳ Like in progress...');
+        return;
+    }
+    
+    likeInProgress.add(postId);
+    likeBtn.disabled = true;
+    
+    try {
+        const userId = getUserId();
+        const { data: existing } = await supabaseClient
+            .from('likes')
+            .select('id')
+            .eq('post_id', postId)
+            .eq('user_id', userId)
+            .maybeSingle();
+        
+        if (existing) {
+            await supabaseClient.from('likes').delete().eq('id', existing.id);
+            likeBtn.classList.remove('liked');
+            likeBtn.style.color = '';
+            likeBtn.innerHTML = '<span class="icon">👍</span> Like';
+        } else {
+            const { error } = await supabaseClient.from('likes').insert({
+                post_id: postId,
+                user_id: userId,
+                username: getUsername()
+            });
+            
+            if (!error || error.code === '23505') {
+                likeBtn.classList.add('liked');
+                likeBtn.style.color = '#1877f2';
+                likeBtn.innerHTML = '<span class="icon">👍</span> Liked';
+                logUserActivity('like', postId);
+            }
+        }
+        
+        // ✅ ALWAYS UPDATE COUNT FROM DATABASE
+        const { count } = await supabaseClient
+            .from('likes')
+            .select('*', { count: 'exact', head: true })
+            .eq('post_id', postId);
+        
+        console.log('Like count for post:', postId, '=', count);
+        
+        const countSpan = likesDiv.querySelector('.like-count');
+        if (countSpan) {
+            countSpan.textContent = count || 0;
+            console.log('Updated like count display to:', count);
+        } else {
+            console.error('Could not find .like-count span!');
+        }
+
+        // ✅ ALSO UPDATE THE BLUE BOX
+        const blueBox = document.querySelector(`.admin-like-count[data-post-id="${postId}"]`);
+        if (blueBox) {
+            await loadLikeCount(postId, blueBox);
+        }
+        
+    } catch (err) {
+        console.error('Like error:', err);
+    } finally {
+        likeBtn.disabled = false;
+        likeInProgress.delete(postId);
+    }
+}
+
+
+async function handleComment(postId, commentsDiv) {
+    const message = prompt('Write your comment:');
+    if (!message || !message.trim()) return;
+    
+    try {
+        const { error } = await supabaseClient.from('comments').insert({
+            post_id: postId,
+            username: getUsername(),
+            message: sanitizeHTML(message.trim())
+        });
+        
+        if (error) throw error;
+        
+        console.log('✅ Comment posted successfully');
+        
+        // ✅ UPDATE COMMENT COUNT
+        const { count } = await supabaseClient
+            .from('comments')
+            .select('*', { count: 'exact', head: true })
+            .eq('post_id', postId);
+        
+        console.log('📊 Comment count for post:', postId, '=', count);
+        
+        const commentSpan = commentsDiv.querySelector('.comment-count');
+        if (commentSpan) {
+            commentSpan.textContent = count || 0;
+            console.log('✅ Updated comment count display to:', count);
+        } else {
+            console.error('❌ Could not find .comment-count span!');
+        }
+        
+        alert('✅ Comment posted!');
+        logUserActivity('comment', postId);
+        
+    } catch (err) {
+        console.error('❌ Comment error:', err);
+        alert('Error posting comment.');
+    }
+}
+
+
+

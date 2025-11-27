@@ -2006,3 +2006,46 @@ body.modal-open {
 .admin-delete-post-btn:hover {
   background-color: #cc0000;
 }
+
+/* ==========================================
+   ADMIN LIKE COUNT - CRITICAL STYLES
+   ========================================== */
+.admin-like-count {
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  background-color: #e7f3ff !important;
+  padding: 16px !important;
+  border-radius: 8px !important;
+  margin: 16px 0 !important;
+  font-size: 16px !important;
+  color: #1877f2 !important;
+  border: 2px solid #1877f2 !important;
+  font-weight: 700 !important;
+  text-align: center !important;
+  box-shadow: 0 2px 8px rgba(24, 119, 242, 0.15) !important;
+  position: relative !important;
+  z-index: 10 !important;
+  width: auto !important;
+  max-width: 100% !important;
+  line-height: 1.5 !important;
+}
+
+.admin-like-count strong {
+  font-size: 18px !important;
+  color: #1877f2 !important;
+}
+
+.view-likes-link {
+  color: #1877f2 !important;
+  text-decoration: underline !important;
+  cursor: pointer !important;
+  font-weight: 500 !important;
+  margin-left: 8px !important;
+  display: inline !important;
+}
+
+.view-likes-link:hover {
+  color: #166fe5 !important;
+  text-decoration: none !important;
+}

@@ -14,6 +14,47 @@ const POSTS_PER_PAGE = 10;
 let translationRequestCount = 0;
 const MAX_TRANSLATIONS_PER_MINUTE = 10;
 
+// ============================================
+// USER TRACKING & SESSION MANAGEMENT
+// ============================================
+
+// Generate or retrieve user ID
+function getUserId() {
+  let userId = localStorage.getItem('fb_user_id');
+  if (!userId) {
+    userId = 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+    localStorage.setItem('fb_user_id', userId);
+    localStorage.setItem('fb_session_start', new Date().toISOString());
+  }
+  return userId;
+}
+
+// Get or prompt for username (only when first interaction happens)
+function getUsername() {
+  let username = localStorage.getItem('fb_username');
+  if (!username) {
+    username = prompt('Enter your name (optional - you can skip):');
+    if (!username || username.trim() === '') {
+      username = 'Anonymous_' + Math.random().toString(36).substr(2, 5);
+    }
+    localStorage.setItem('fb_username', username.trim());
+  }
+  return username;
+}
+
+// Track user activity
+function logUserActivity(action, postId) {
+  const userId = getUserId();
+  const username = getUsername();
+  console.log('User Activity:', {
+    userId,
+    username,
+    action,
+    postId,
+    timestamp: new Date().toISOString()
+  });
+  // You can extend this to send to a user_activity table if needed
+}
 
 // ============================================
 // SECURITY: XSS Protection (IMPROVED VERSION)
@@ -244,6 +285,147 @@ function renderPosts() {
     currentPage++;
 }
 
+// ============================================
+// LIKE HANDLING FUNCTION
+// ============================================
+async function handleLike(postId, buttonElement) {
+  const userId = getUserId();
+  const username = getUsername();
+  
+  // Add animation class
+  buttonElement.classList.add('liked');
+  buttonElement.style.color = '#1877f2';
+  
+  // Animate
+  buttonElement.style.transform = 'scale(1.2)';
+  setTimeout(() => {
+    buttonElement.style.transform = 'scale(1)';
+  }, 200);
+  
+  try {
+    const { data, error } = await supabaseClient
+      .from('likes')
+      .insert([{
+        post_id: postId,
+        user_id: userId,
+        username: username,
+        created_at: new Date().toISOString()
+      }]);
+    
+    if (error) {
+      console.error('Error inserting like:', error);
+      alert('Could not save like. Please try again.');
+      buttonElement.classList.remove('liked');
+      buttonElement.style.color = '#65676b';
+    } else {
+      console.log('Like saved successfully');
+      logUserActivity('LIKE', postId);
+    }
+  } catch (err) {
+    console.error('Like error:', err);
+  }
+}
+
+// ============================================
+// COMMENT FUNCTIONS
+// ============================================
+async function loadComments(postId, containerElement) {
+  const { data, error } = await supabaseClient
+    .from('comments')
+    .select('*')
+    .eq('post_id', postId)
+    .order('created_at', { ascending: true });
+  
+  if (error) {
+    console.error('Error loading comments:', error);
+    return;
+  }
+  
+  containerElement.innerHTML = '';
+  
+  if (data && data.length > 0) {
+    data.forEach(comment => {
+      const commentDiv = document.createElement('div');
+      commentDiv.className = 'comment-item';
+      const time = new Date(comment.created_at).toLocaleString('en-IN', {
+        month: 'short',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: 'numeric'
+      });
+      commentDiv.innerHTML = `
+        <div class="comment-author">${sanitizeHTML(comment.username || 'Anonymous')}</div>
+        <div class="comment-text">${sanitizeHTML(comment.message)}</div>
+        <div class="comment-time">${time}</div>
+      `;
+      containerElement.appendChild(commentDiv);
+    });
+  } else {
+    containerElement.innerHTML = '<div class="no-comments">No comments yet. Be the first!</div>';
+  }
+}
+
+async function submitComment(postId, message, containerElement) {
+  const userId = getUserId();
+  const username = getUsername();
+  
+  try {
+    const { data, error } = await supabaseClient
+      .from('comments')
+      .insert([{
+        post_id: postId,
+        username: username,
+        message: message,
+        created_at: new Date().toISOString()
+      }]);
+    
+    if (error) {
+      console.error('Error inserting comment:', error);
+      alert('Could not post comment. Please try again.');
+    } else {
+      console.log('Comment posted successfully');
+      logUserActivity('COMMENT', postId);
+      // Reload comments
+      loadComments(postId, containerElement);
+    }
+  } catch (err) {
+    console.error('Comment error:', err);
+  }
+}
+
+async function loadLikeCount(postId, element) {
+  const { data, error, count } = await supabaseClient
+    .from('likes')
+    .select('*', { count: 'exact' })
+    .eq('post_id', postId);
+  
+  if (error) {
+    element.textContent = 'Error loading likes';
+    return;
+  }
+  
+  element.innerHTML = `<strong>👍 ${count || 0} Likes</strong> | Click to see who liked`;
+  element.style.cursor = 'pointer';
+  element.onclick = function() {
+    showLikeDetails(postId, data);
+  };
+}
+
+function showLikeDetails(postId, likes) {
+  if (!likes || likes.length === 0) {
+    alert('No likes yet');
+    return;
+  }
+  
+  let details = `Likes for this post (${likes.length}):\n\n`;
+  likes.forEach(like => {
+    const time = new Date(like.created_at).toLocaleString();
+    details += `${like.username || 'Anonymous'} - ${time}\n`;
+  });
+  
+  alert(details);
+}
+
 
 function createPostCard(post) {
     const card = document.createElement('div');
@@ -455,24 +637,96 @@ function createPostCard(post) {
         card.appendChild(videosDiv);
     }
 
-    // STATS
-    const stats = document.createElement('div');
-    stats.className = 'post-stats';
-    stats.innerHTML = `
-        <div class="likes">👍 ❤️ 😆 25</div>
-        <div class="comments-shares">10 Comments · 5 Shares</div>
-    `;
-    card.appendChild(stats);
+    // LIKE COUNT (Admin only)
+    if (isAdmin) {
+        const likeCountDiv = document.createElement('div');
+        likeCountDiv.className = 'admin-like-count';
+        likeCountDiv.textContent = 'Loading likes...';
+        likeCountDiv.setAttribute('data-post-id', post.id);
+        card.appendChild(likeCountDiv);
+  
+        // Load like count
+        loadLikeCount(post.id, likeCountDiv);
+    }
 
-    // ACTIONS
-    const actions = document.createElement('div');
-    actions.className = 'post-actions';
-    actions.innerHTML = `
-        <button class="action-btn"><span class="icon">👍</span> Like</button>
-        <button class="action-btn"><span class="icon">💬</span> Comment</button>
-        <button class="action-btn"><span class="icon">↗</span> Share</button>
+
+    // ============================================
+    // CREATE POST ACTIONS DIV (Like, Comment, Share)
+    // ============================================
+    const actionsDiv = document.createElement('div');
+    actionsDiv.className = 'post-actions';
+
+    // LIKE BUTTON with functionality
+    const likeBtn = document.createElement('button');
+    likeBtn.className = 'action-btn like-btn';
+    likeBtn.innerHTML = '<span class="icon">👍</span> Like';
+    likeBtn.setAttribute('data-post-id', post.id);
+    likeBtn.onclick = async function() {
+        await handleLike(post.id, this);
+    };
+    actionsDiv.appendChild(likeBtn);
+
+    // COMMENT BUTTON
+    const commentBtn = document.createElement('button');
+    commentBtn.className = 'action-btn comment-btn';
+    commentBtn.innerHTML = '<span class="icon">💬</span> Comment';
+    actionsDiv.appendChild(commentBtn);
+
+    // SHARE BUTTON (placeholder - not functional yet)
+    const shareBtn = document.createElement('button');
+    shareBtn.className = 'action-btn share-btn';
+    shareBtn.innerHTML = '<span class="icon">↗</span> Share';
+    actionsDiv.appendChild(shareBtn);
+
+    // Add actions to card
+    card.appendChild(actionsDiv);
+
+
+    // COMMENTS SECTION
+    const commentsSection = document.createElement('div');
+    commentsSection.className = 'comments-section';
+    commentsSection.style.display = 'none';
+    commentsSection.setAttribute('data-post-id', post.id);
+
+    // Comment input
+    const commentInputDiv = document.createElement('div');
+    commentInputDiv.className = 'comment-input-container';
+    commentInputDiv.innerHTML = `
+        <input type="text" class="comment-input" placeholder="Write a comment in English or Hindi..." />
+        <button class="comment-submit-btn">Post</button>
     `;
-    card.appendChild(actions);
+    commentsSection.appendChild(commentInputDiv);
+
+    // Comments list
+    const commentsList = document.createElement('div');
+    commentsList.className = 'comments-list';
+    commentsSection.appendChild(commentsList);
+
+    card.appendChild(commentsSection);
+
+    // Comment button click handle
+    if (commentBtn) {
+        commentBtn.onclick = function() {
+            const section = card.querySelector('.comments-section');
+            if (section.style.display === 'none') {
+                section.style.display = 'block';
+                loadComments(post.id, commentsList);
+            } else {
+                section.style.display = 'none';
+            }
+        };
+    }
+
+    // Comment submit handler
+    const submitBtn = commentInputDiv.querySelector('.comment-submit-btn');
+    const inputField = commentInputDiv.querySelector('.comment-input');
+    submitBtn.onclick = async function() {
+    const text = inputField.value.trim();
+    if (!text) return;
+  
+    await submitComment(post.id, text, commentsList);
+    inputField.value = '';
+    };
 
     return card;
 }
@@ -1424,4 +1678,155 @@ function addTranslationFeature(postElement, originalText) {
     
     // Insert after content
     contentDiv.parentNode.insertBefore(translationContainer, contentDiv.nextSibling);
+}
+
+// ============================================
+// ADMIN LOGIN SYSTEM (Supabase Auth)
+// ============================================
+let isAdmin = false;
+let currentUser = null;
+
+document.addEventListener('DOMContentLoaded', async function() {
+  // Check if user is already logged in
+  const { data: { session } } = await supabaseClient.auth.getSession();
+  
+  if (session) {
+    currentUser = session.user;
+    await checkAdminStatus();
+  }
+  
+  // Admin login button
+  const adminBtn = document.getElementById('adminLoginBtn');
+  const adminModal = document.getElementById('adminLoginModal');
+  const adminClose = document.querySelector('.admin-close');
+  const adminSubmit = document.getElementById('adminLoginSubmit');
+  
+  if (adminBtn) {
+    adminBtn.onclick = function() {
+      if (isAdmin) {
+        logoutAdmin();
+      } else {
+        adminModal.style.display = 'flex';
+      }
+    };
+  }
+  
+  if (adminClose) {
+    adminClose.onclick = function() {
+      adminModal.style.display = 'none';
+    };
+  }
+  
+  if (adminSubmit) {
+    adminSubmit.onclick = async function() {
+      const email = document.getElementById('adminEmail').value.trim();
+      const password = document.getElementById('adminPassword').value;
+      const errorDiv = document.getElementById('adminLoginError');
+      
+      if (!email || !password) {
+        errorDiv.textContent = 'Please enter both email and password';
+        return;
+      }
+      
+      // Show loading
+      adminSubmit.disabled = true;
+      adminSubmit.textContent = 'Logging in...';
+      errorDiv.textContent = '';
+      
+      try {
+        // Sign in with Supabase Auth
+        const { data, error } = await supabaseClient.auth.signInWithPassword({
+          email: email,
+          password: password
+        });
+        
+        if (error) {
+          errorDiv.textContent = 'Invalid email or password';
+          adminSubmit.disabled = false;
+          adminSubmit.textContent = 'Login';
+          return;
+        }
+        
+        currentUser = data.user;
+        
+        // Check if user is admin
+        const isAdminUser = await checkAdminStatus();
+        
+        if (!isAdminUser) {
+          // User logged in but is not admin
+          await supabaseClient.auth.signOut();
+          errorDiv.textContent = 'You do not have admin privileges';
+          adminSubmit.disabled = false;
+          adminSubmit.textContent = 'Login';
+          return;
+        }
+        
+        // Success
+        adminModal.style.display = 'none';
+        errorDiv.textContent = '';
+        alert(`Welcome Admin! (${email})`);
+        location.reload();
+        
+      } catch (err) {
+        console.error('Login error:', err);
+        errorDiv.textContent = 'Login failed. Please try again.';
+        adminSubmit.disabled = false;
+        adminSubmit.textContent = 'Login';
+      }
+    };
+  }
+});
+
+// Check if current user is admin
+async function checkAdminStatus() {
+  if (!currentUser) {
+    isAdmin = false;
+    return false;
+  }
+  
+  try {
+    const { data, error } = await supabaseClient
+      .from('admin_roles')
+      .select('user_id')
+      .eq('user_id', currentUser.id)
+      .single();
+    
+    if (data && !error) {
+      isAdmin = true;
+      localStorage.setItem('fb_admin', 'true');
+      localStorage.setItem('fb_admin_email', currentUser.email);
+      enableAdminFeatures();
+      return true;
+    } else {
+      isAdmin = false;
+      localStorage.removeItem('fb_admin');
+      return false;
+    }
+  } catch (err) {
+    console.error('Admin check error:', err);
+    isAdmin = false;
+    return false;
+  }
+}
+
+function enableAdminFeatures() {
+  // Change admin button to logout
+  const adminBtn = document.getElementById('adminLoginBtn');
+  if (adminBtn) {
+    adminBtn.title = 'Admin Logout';
+    adminBtn.style.backgroundColor = '#42b72a';
+  }
+  
+  // Show like counts (already implemented in createPostCard)
+  document.body.classList.add('admin-mode');
+}
+
+async function logoutAdmin() {
+  await supabaseClient.auth.signOut();
+  localStorage.removeItem('fb_admin');
+  localStorage.removeItem('fb_admin_email');
+  isAdmin = false;
+  currentUser = null;
+  alert('Logged out successfully');
+  location.reload();
 }

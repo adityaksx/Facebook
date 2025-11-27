@@ -58,7 +58,7 @@
                 <div class="nav-icon">📺</div>
                 <div class="nav-icon">👥</div>
                 <div class="nav-icon">🔔</div>
-                <div class="nav-icon">⚙️</div>
+                <div class="nav-icon" id="adminLoginBtn" title="Admin Login">⚙️</div>
             </div>
         </div>
     </nav>
@@ -165,6 +165,18 @@
             </div>
         </section>
     </main>
+
+    <!-- Admin Login Modal -->
+    <div id="adminLoginModal" class="admin-modal" style="display: none;">
+        <div class="admin-modal-content">
+            <span class="admin-close">&times;</span>
+            <h2>Admin Login</h2>
+            <input type="email" id="adminEmail" placeholder="Email" class="admin-input" />
+            <input type="password" id="adminPassword" placeholder="Password" class="admin-input" />
+            <button id="adminLoginSubmit" class="admin-submit-btn">Login</button>
+            <div id="adminLoginError" style="color: red; margin-top: 10px;"></div>
+        </div>
+    </div>
 
     <!-- SCRIPTS -->
     <script src="https://cdn.jsdelivr.net/npm/fuse.js/dist/fuse.min.js"></script>

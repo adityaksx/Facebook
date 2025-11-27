@@ -133,7 +133,6 @@ document.addEventListener('DOMContentLoaded', function() {
     loadAllPosts();  // This will now initialize search automatically
     setupImageModal();
     setupScrollLoading();
-    setupLazyLoadingWithBlur();
 });
 
 
@@ -255,9 +254,6 @@ async function loadAllPosts() {
     if (typeof loadPhotoGrid === 'function') loadPhotoGrid();
 }
 
-
-
-
 function renderPosts() {
     const container = document.getElementById('postsContainer');
     const start = currentPage * POSTS_PER_PAGE;
@@ -268,44 +264,33 @@ function renderPosts() {
         console.error('Posts container not found');
         return;
     }
-    
+
     if (postsToRender.length === 0 && currentPage === 0) {
         container.innerHTML = '<div class="no-posts"><p>No posts to display</p></div>';
         return;
     }
 
-    // Build all post nodes first, keep them in an array
+    // Build fragment
     const fragment = document.createDocumentFragment();
-    postsToRender.forEach((post) => {
+    postsToRender.forEach(post => {
         const postCard = createPostCard(post);
         postCard.setAttribute('data-post-id', post.id);
         fragment.appendChild(postCard);
     });
 
-    // Append fragment once (preserves order)
+    // Append fragment
     container.appendChild(fragment);
+    
+    // ✅ FIX: Refresh AOS AFTER posts are in DOM
+    setTimeout(() => {
+        if (typeof AOS !== 'undefined') {
+            AOS.refresh();
+            console.log('✅ AOS refreshed after posts rendered');
+        }
+    }, 100);
 
-    // Optionally trigger a small staggered animation if you want fade-in staggering:
-    const newCards = container.querySelectorAll('.post-card');
-    // only animate the cards in this "page" (last POSTS_PER_PAGE appended)
-    const total = newCards.length;
-    const startIndex = Math.max(0, total - postsToRender.length);
-    newCards.forEach((card, i) => {
-        card.style.opacity = '0';
-        card.style.transform = 'translateY(10px)';
-        // requestAnimationFrame to ensure CSS transition kicks in
-        requestAnimationFrame(() => {
-            setTimeout(() => {
-                card.style.transition = 'opacity 300ms ease, transform 300ms ease';
-                card.style.opacity = '1';
-                card.style.transform = 'translateY(0)';
-            }, (i - startIndex) * 40);
-        });
-    });
-    setupLazyLoadingWithBlur();
     currentPage++;
 }
-
 
 async function loadLikeCount(postId, element) {
     try {
@@ -354,7 +339,13 @@ async function loadLikeCount(postId, element) {
 
 function showLikeDetails(postId, likes) {
     if (!likes || likes.length === 0) {
-        alert('No likes yet');
+        Toastify({
+            text: "ℹ️ No likes yet",
+            duration: 2000,
+            gravity: "top",
+            position: "center",
+            style: { background: "#2196F3" }
+        }).showToast();
         return;
     }
   
@@ -421,7 +412,13 @@ async function loadComments(postId, containerElement) {
 
 async function deleteComment(commentId, postId) {
   if (!isAdmin) {
-    alert('Only admins can delete comments');
+    Toastify({
+        text: "⚠️ Only admins can delete comments",
+        duration: 3000,
+        gravity: "top",
+        position: "right",
+        style: { background: "#ff9800" }
+    }).showToast();
     return;
   }
   
@@ -437,11 +434,23 @@ async function deleteComment(commentId, postId) {
     
     if (error) {
       console.error('Error deleting comment:', error);
-      alert('Failed to delete comment');
+      Toastify({
+        text: "❌ Failed to delete comment",
+        duration: 3000,
+        gravity: "top",
+        position: "right",
+        style: { background: "#ff4444" }
+      }).showToast();
       return;
     }
     
-    alert('Comment deleted successfully');
+    Toastify({
+        text: "✅ Comment deleted successfully",
+        duration: 3000,
+        gravity: "top",
+        position: "right",
+        style: { background: "linear-gradient(to right, #00b09b, #96c93d)" }
+    }).showToast();
     
     // Reload comments
     const commentsList = document.querySelector(`[data-post-id="${postId}"] .comments-list`);
@@ -450,7 +459,13 @@ async function deleteComment(commentId, postId) {
     }
   } catch (err) {
     console.error('Delete comment error:', err);
-    alert('Failed to delete comment');
+    Toastify({
+        text: "❌ Failed to delete comment",
+        duration: 3000,
+        gravity: "top",
+        position: "right",
+        style: { background: "#ff4444" }
+    }).showToast();
   }
 }
 
@@ -474,7 +489,13 @@ async function submitComment(postId, message, containerElement) {
         
         if (error) {
             console.error('Error inserting comment:', error);
-            alert('Could not post comment. Please try again.');
+            Toastify({
+                text: "❌ Could not post comment. Please try again.",
+                duration: 3000,
+                gravity: "top",
+                position: "right",
+                style: { background: "#ff4444" }
+            }).showToast();
         } else {
             console.log('✅ Comment posted successfully');
             logUserActivity('COMMENT', postId);
@@ -510,7 +531,13 @@ async function submitComment(postId, message, containerElement) {
 
 async function editPost(postId) {
   if (!isAdmin) {
-    alert('Only admins can edit posts');
+    Toastify({
+        text: "⚠️ Only admins can edit posts",
+        duration: 3000,
+        gravity: "top",
+        position: "right",
+        style: { background: "#ff9800" }
+    }).showToast();
     return;
   }
   
@@ -522,7 +549,13 @@ async function editPost(postId) {
     .single();
   
   if (error || !post) {
-    alert('Error loading post data');
+    Toastify({
+        text: "❌ Error loading post data",
+        duration: 3000,
+        gravity: "top",
+        position: "right",
+        style: { background: "#ff4444" }
+    }).showToast();
     return;
   }
   
@@ -614,19 +647,37 @@ async function savePostEdit(postId) {
       }
     }
     
-    alert('Post updated successfully!');
+    Toastify({
+        text: "✅ Post updated successfully!",
+        duration: 3000,
+        gravity: "top",
+        position: "right",
+        style: { background: "linear-gradient(to right, #00b09b, #96c93d)" }
+    }).showToast();
     document.querySelector('.admin-edit-modal').remove();
     location.reload();
     
   } catch (err) {
     console.error('Error updating post:', err);
-    alert('Failed to update post: ' + err.message);
+    Toastify({
+        text: "❌ Failed to update post: " + err.message,
+        duration: 4000,
+        gravity: "top",
+        position: "right",
+        style: { background: "#ff4444" }
+    }).showToast();
   }
 }
 
 async function deletePost(postId) {
   if (!isAdmin) {
-    alert('Only admins can delete posts');
+    Toastify({
+        text: "⚠️ Only admins can delete posts",
+        duration: 3000,
+        gravity: "top",
+        position: "right",
+        style: { background: "#ff9800" }
+    }).showToast();
     return;
   }
   
@@ -642,12 +693,24 @@ async function deletePost(postId) {
     
     if (error) throw error;
     
-    alert('Post deleted successfully!');
+    Toastify({
+        text: "✅ Post deleted successfully!",
+        duration: 3000,
+        gravity: "top",
+        position: "right",
+        style: { background: "linear-gradient(to right, #00b09b, #96c93d)" }
+    }).showToast();
     location.reload();
     
   } catch (err) {
     console.error('Error deleting post:', err);
-    alert('Failed to delete post: ' + err.message);
+    Toastify({
+        text: "❌ Failed to delete post: " + err.message,
+        duration: 4000,
+        gravity: "top",
+        position: "right",
+        style: { background: "#ff4444" }
+    }).showToast();
   }
 }
 
@@ -660,6 +723,10 @@ function createPostCard(post) {
     const card = document.createElement('div');
     card.className = 'post-card';
     card.setAttribute('data-post-id', post.id);
+
+    // ✅ ADD THIS LINE - Add AOS animation
+    card.setAttribute('data-aos', 'fade-up');
+    card.setAttribute('data-aos-duration', '500');
 
     // HEADER
     const header = document.createElement('div');
@@ -910,19 +977,28 @@ function createPostCard(post) {
     const likeBtn = document.createElement('button');
     likeBtn.className = 'action-btn like-btn';
     likeBtn.innerHTML = '<span class="icon">👍</span> Like';
+    likeBtn.title = 'Like this post';
     likeBtn.onclick = () => handleLike(post.id, likeBtn, likesDiv);
 
     const commentBtn = document.createElement('button');
     commentBtn.className = 'action-btn';
     commentBtn.innerHTML = '<span class="icon">💬</span> Comment';
+    commentBtn.title = 'Comment on this post';
     commentBtn.onclick = () => handleComment(post.id, commentsDiv);
 
     const shareBtn = document.createElement('button');
     shareBtn.className = 'action-btn';
     shareBtn.innerHTML = '<span class="icon">↗️</span> Share';
+    shareBtn.title = 'Share this post';
     shareBtn.onclick = () => {
         navigator.clipboard.writeText(window.location.href);
-        alert('Link copied!');
+        Toastify({
+            text: "🔗 Link copied to clipboard!",
+            duration: 2000,
+            gravity: "bottom",
+            position: "center",
+            style: { background: "#1877f2" }
+        }).showToast();
     };
 
     actions.appendChild(likeBtn);
@@ -1343,106 +1419,35 @@ function setupImageModal() {
     // ============================================
     // TOUCH GESTURES - COMPLETE FIXED VERSION
     // ============================================
-    
+    // ✅ SIMPLIFIED TOUCH GESTURES
     let touchStartX = 0;
     let touchStartY = 0;
-    let touchEndX = 0;
-    let touchEndY = 0;
-    let touchMoved = false;
-    let initialDistance = 0;
-    let initialZoom = 1;
-    let touchStartTime = 0; 
 
-    
-    // TOUCH START
     container.addEventListener('touchstart', (e) => {
-        touchStartTime = Date.now(); 
-        if (e.touches.length === 1) {
-            touchStartX = e.touches[0].clientX;
-            touchStartY = e.touches[0].clientY;
-            touchEndX = touchStartX;
-            touchEndY = touchStartY;
-            touchMoved = false;
-        } else if (e.touches.length === 2) {
-            const dx = e.touches[0].clientX - e.touches[1].clientX;
-            const dy = e.touches[0].clientY - e.touches[1].clientY;
-            initialDistance = Math.sqrt(dx * dx + dy * dy);
-            initialZoom = currentZoom;
-        }
+        touchStartX = e.touches[0].clientX;
+        touchStartY = e.touches[0].clientY;
     }, { passive: true });
-    
-    // TOUCH MOVE
-    container.addEventListener('touchmove', (e) => {
-        if (e.touches.length === 1) {
-            touchEndX = e.touches[0].clientX;
-            touchEndY = e.touches[0].clientY;
-            
-            const deltaX = Math.abs(touchEndX - touchStartX);
-            const deltaY = Math.abs(touchEndY - touchStartY);
-            
-            if (deltaX > 10 || deltaY > 10) {
-                touchMoved = true;
-            }
-        } else if (e.touches.length === 2) {
-            touchMoved = true;
-            const dx = e.touches[0].clientX - e.touches[1].clientX;
-            const dy = e.touches[0].clientY - e.touches[1].clientY;
-            const distance = Math.sqrt(dx * dx + dy * dy);
-            const scale = distance / initialDistance;
-            currentZoom = initialZoom * scale;
-            currentZoom = Math.max(0.5, Math.min(currentZoom, 4));
-            applyTransform();
-        }
-    }, { passive: true });
-    
-    // TOUCH END
+
     container.addEventListener('touchend', (e) => {
-        if (e.changedTouches.length === 1 && e.touches.length === 0) {
-            const deltaX = touchEndX - touchStartX;
-            const deltaY = touchEndY - touchStartY;
-            const absDeltaX = Math.abs(deltaX);
-            const absDeltaY = Math.abs(deltaY);
-            const touchDuration = Date.now() - touchStartTime;  // ← ADD THIS
-            const target = e.target;  // ← ADD THIS
-            const isBlackArea = target === container || target === overlay; 
-
-            // SWIPE DOWN TO CLOSE ← ADD THIS ENTIRE BLOCK
-            if (touchMoved && deltaY > 100 && absDeltaY > absDeltaX && currentZoom === 1) {
-                closeModal();
-                return;
+        const touchEndX = e.changedTouches[0].clientX;
+        const touchEndY = e.changedTouches[0].clientY;
+    
+        const deltaX = touchEndX - touchStartX;
+        const deltaY = touchEndY - touchStartY;
+    
+        // Swipe left/right for navigation
+        if (Math.abs(deltaX) > 50 && Math.abs(deltaX) > Math.abs(deltaY)) {
+            if (deltaX > 0) {
+                navigateImage(-1); // Swipe right - previous
+            } else {
+                navigateImage(1); // Swipe left - next
             }
-            
-            // Check if horizontal swipe
-            const isHorizontalSwipe = absDeltaX > absDeltaY && absDeltaX > 50;
-            
-            if (touchMoved && isHorizontalSwipe && currentZoom === 1) {
-                // Horizontal swipe detected
-                if (deltaX > 0) {
-                    // Swipe RIGHT -> Previous image
-                    navigateImage(-1);
-                } else {
-                    // Swipe LEFT -> Next image
-                    navigateImage(1);
-                }
-           } 
-            // TAP ON BLACK AREA TO CLOSE  ← NEW LOGIC
-            else if (!touchMoved && touchDuration < 300 && isBlackArea) {
-                closeModal();
-            }
-            // TAP ON IMAGE - TOGGLE ZOOM  ← UPDATED LOGIC
-            else if (!touchMoved && touchDuration < 300 && !isBlackArea) {
-                if (currentZoom === 1) {
-                    currentZoom = 2;
-                } else {
-                    resetZoom();
-                }
-                applyTransform();
-            }
-
         }
-        
-        // Reset
-        touchMoved = false;
+    
+        // Swipe down to close
+        if (deltaY > 100 && Math.abs(deltaY) > Math.abs(deltaX)) {
+            closeModal();
+        }
     }, { passive: true });
 
     
@@ -1521,21 +1526,6 @@ function setupImageModal() {
 }
 
 console.log('Facebook Complete JS Loaded');
-
-function setupLazyLoadingWithBlur() {
-  // For all images with .lazy and NOT .loaded
-  document.querySelectorAll('img.lazy:not(.loaded)').forEach(img => {
-    // On load, remove the blur
-    img.addEventListener('load', function handler() {
-      img.classList.add('loaded');
-      img.removeEventListener('load', handler);
-    });
-    // If already loaded (from cache), mark loaded immediately
-    if (img.complete) {
-      img.classList.add('loaded');
-    }
-  });
-}
 
 // Helper function to convert Google Drive URLs to embeddable format
 function convertGoogleDriveUrl(url) {
@@ -1974,7 +1964,13 @@ document.addEventListener('DOMContentLoaded', async function() {
             // Success
             adminModal.style.display = 'none';
             errorDiv.textContent = '';
-            alert(`Welcome Admin! (${email})`);
+            Toastify({
+                text: `🎉 Welcome Admin! (${email})`,
+                duration: 3000,
+                gravity: "top",
+                position: "right",
+                style: { background: "linear-gradient(to right, #1877f2, #42b72a)" }
+            }).showToast();
             location.reload();
         
         } catch (err) {
@@ -2087,7 +2083,13 @@ async function saveNewPost() {
     const videosText = document.getElementById('new-post-videos').value;
   
     if (!content.trim()) {
-        alert('Please enter post content');
+        Toastify({
+            text: "⚠️ Please enter post content",
+            duration: 3000,
+            gravity: "top",
+            position: "center",
+            style: { background: "#ff9800" }
+        }).showToast();
         return;
     }
   
@@ -2134,13 +2136,25 @@ async function saveNewPost() {
             }
         }
     
-        alert('Post created successfully!');
+        Toastify({
+            text: "✅ Post created successfully!",
+            duration: 3000,
+            gravity: "top",
+            position: "right",
+            style: { background: "linear-gradient(to right, #00b09b, #96c93d)" }
+        }).showToast();
         document.querySelector('.admin-edit-modal').remove();
         location.reload();
     
     } catch (err) {
         console.error('Error creating post:', err);
-        alert('Failed to create post: ' + err.message);
+        Toastify({
+            text: "❌ Failed to create post: " + err.message,
+            duration: 4000,
+            gravity: "top",
+            position: "right",
+            style: { background: "#ff4444" }
+        }).showToast();
     }
 }
 
@@ -2153,7 +2167,13 @@ async function logoutAdmin() {
     localStorage.removeItem('fb_admin_email');
     isAdmin = false;
     currentUser = null;
-    alert('Logged out successfully');
+    Toastify({
+        text: "👋 Logged out successfully",
+        duration: 2000,
+        gravity: "top",
+        position: "center",
+        style: { background: "#1877f2" }
+    }).showToast();
     location.reload();
 }
 
@@ -2298,12 +2318,24 @@ async function handleComment(postId, commentsDiv) {
             console.error('❌ Could not find .comment-count span!');
         }
         
-        alert('✅ Comment posted!');
+        Toastify({
+            text: "✅ Comment posted!",
+            duration: 3000,
+            gravity: "top",
+            position: "right",
+            style: { background: "linear-gradient(to right, #00b09b, #96c93d)" }
+        }).showToast();
         logUserActivity('comment', postId);
         
     } catch (err) {
         console.error('❌ Comment error:', err);
-        alert('Error posting comment.');
+        Toastify({
+            text: "❌ Error posting comment",
+            duration: 3000,
+            gravity: "top",
+            position: "right",
+            style: { background: "#ff4444" }
+        }).showToast();
     }
 }
 

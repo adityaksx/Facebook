@@ -40,6 +40,18 @@
     <!-- Fuse.js for fuzzy search -->
     <script src="https://cdn.jsdelivr.net/npm/fuse.js@7.0.0"></script>
 
+    <!-- ===== ULTIMATE PERFORMANCE LIBRARIES 2025 ===== -->
+
+    <!-- AOS CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/aos@2.3.1/dist/aos.css">
+
+    <!-- Toastify - Notifications -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
+
+    <!-- PhotoSwipe - Image Gallery -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/photoswipe@5.4.3/dist/photoswipe.css">
+
+    <!-- Your main stylesheet -->
     <link rel="stylesheet" href="facebook_complete.css">
 </head>
 <body style="overscroll-behavior-y: contain;">
@@ -84,11 +96,11 @@
     <!-- Profile Header -->
     <header class="profile-header">
         <div class="cover-photo">
-            <img src="cover.jpg" class="lazy" loading="lazy" alt="Cover Photo" onerror="this.style.display='none'" />
+            <img src="cover.jpg" alt="Cover Photo" onerror="this.style.display='none'" />
         </div>
         <div class="profile-info-container">
             <div class="profile-picture">
-                <img src="profile.jpg" class="lazy" loading="lazy" alt="Profile Picture" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22168%22 height=%22168%22%3E%3Crect fill=%22%23ddd%22/%3E%3C/svg%3E'" />
+                <img src="profile.jpg" alt="Profile Picture" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22168%22 height=%22168%22%3E%3Crect fill=%22%23ddd%22/%3E%3C/svg%3E'" />
             </div>
             <div class="profile-details">
                 <h1 class="profile-name">
@@ -196,18 +208,100 @@
         </div>
     </div>
 
-    <!-- SCRIPTS -->
+    <!-- Supabase -->
+    <script src="https://unpkg.com/@supabase/supabase-js@2.47.0/dist/umd/supabase.js"></script>
+    <script>
+        window.SUPABASE_URL = 'https://juznwjbznnlccdhhcpso.supabase.co';
+        window.SUPABASE_ANON_KEY = 'sb_publishable_RSXulp5PrlLVmcWnfPrl9A_T_-e_arT';
+    </script>
+
+    <!-- Fuse.js for search -->
     <script src="https://cdn.jsdelivr.net/npm/fuse.js/dist/fuse.min.js"></script>
-    <!--  Supabase client library -->
-   <script src="https://unpkg.com/@supabase/supabase-js@2.47.0/dist/umd/supabase.js"></script>
 
-   <!-- Your project config -->
-   <script>
-     window.SUPABASE_URL = "https://juznwjbznnlccdhhcpso.supabase.co";
-     window.SUPABASE_ANON_KEY = "sb_publishable_RSXulp5PrlLVmcWnfPrl9A_T_-e_arT";
-   </script>
+    <!-- AOS Script -->
+    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+    
+    <!-- ✅ NEW: Hammer.js - Touch Gestures -->
+    <script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8/hammer.min.js"></script>
+    
+    <!-- Toastify (keep existing) -->
+    <script src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
+    
+    <!-- Tippy.js with Popper (keep existing) -->
+    <script src="https://unpkg.com/@popperjs/core@2"></script>
+    <script src="https://unpkg.com/tippy.js@6"></script>
+    
+    <!-- Your main script -->
+    <script src="facebook_complete.js"></script>
+    
+    <!-- ✨ NEW: Initialize Enhancement Libraries -->
+    <script>
+    window.addEventListener('DOMContentLoaded', function() {
+        // 1. Native smooth scroll
+        document.documentElement.style.scrollBehavior = 'smooth';
+        console.log('✅ Native smooth scroll enabled');
 
-   <!-- Your main script (must be last) -->
-   <script src="facebook_complete.js" defer></script>
+        // 2. Initialize AOS (CRITICAL!)
+        setTimeout(() => {
+            try {
+                if (typeof AOS !== 'undefined') {
+                    AOS.init({
+                        duration: 400,
+                        easing: 'ease-out',
+                        once: false,
+                        mirror: false,
+                        offset: 50,
+                        delay: 0
+                    });
+                    console.log('✅ AOS initialized');
+                } else {
+                    console.error('❌ AOS library not loaded!');
+                }
+            } catch(e) {
+                console.error('❌ AOS error:', e);
+            }
+        }, 100);
+
+        // 3. Initialize Tooltips
+        setTimeout(() => {
+            try {
+                if (typeof tippy !== 'undefined') {
+                    tippy('.action-btn', {
+                        animation: 'scale',
+                        theme: 'facebook',
+                        placement: 'top',
+                        delay: [500, 0]
+                    });
+
+                    tippy('.nav-icon', {
+                        animation: 'fade',
+                        placement: 'bottom',
+                        delay: [500, 0]
+                    });
+                    console.log('✅ Tippy tooltips initialized');
+                }
+            } catch(e) {
+                console.error('❌ Tippy error:', e);
+            }
+        }, 1000);
+    });
+    </script>
+
+    <!-- ADD THIS DEBUG SCRIPT AFTER -->
+    <script>
+    window.addEventListener('DOMContentLoaded', function() {
+        console.log('🔍 DEBUG: DOM Loaded');
+        console.log('🔍 Supabase Client:', window.supabase);
+        console.log('🔍 Supabase URL:', window.SUPABASE_URL);
+        console.log('🔍 Supabase Key:', window.SUPABASE_ANON_KEY);
+    
+        // Check if functions exist
+        setTimeout(() => {
+            console.log('🔍 loadAllPosts exists:', typeof loadAllPosts);
+            console.log('🔍 renderPosts exists:', typeof renderPosts);
+            console.log('🔍 allPosts:', window.allPosts);
+        }, 2000);
+    });
+    </script>
 </body>
 </html>

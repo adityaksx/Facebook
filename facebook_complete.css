@@ -1,5 +1,22 @@
 /* COMPLETE FACEBOOK PROFILE PAGE CSS */
 
+/* ===== CRITICAL: Override AOS Defaults ===== */
+[data-aos] {
+    transition-property: opacity, transform;
+    transition-duration: 0.4s;
+    transition-timing-function: ease-out;
+}
+
+[data-aos="fade-up"] {
+    transform: translateY(20px);
+    opacity: 0;
+}
+
+[data-aos="fade-up"].aos-animate {
+    transform: translateY(0);
+    opacity: 1;
+}
+
 * {
     margin: 0;
     padding: 0;
@@ -39,9 +56,8 @@ img {
     image-rendering: crisp-edges;
 }
 
-/* Hardware acceleration */
-.post-card, .post-images img, .modal-content {
-    will-change: transform;
+/* Optimized hardware acceleration - only for images in modal */
+.modal-content {
     transform: translateZ(0);
     backface-visibility: hidden;
 }
@@ -449,20 +465,14 @@ img {
     background-color: #ffffff;
     border-radius: 8px;
     padding: 12px;
-    margin-bottom: 8px !important;
-    box-shadow: 0 6px 16px rgba(0,0,0,0.06);
-    animation: fadeIn 0.3s ease-out;
-    transition: box-shadow .15s ease;
+    margin-bottom: 16px !important;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+    transition: box-shadow 0.2s ease;
     border: 1px solid #ddd;
 }
 
-.post-card:active {
-    box-shadow: 0 8px 20px rgba(0,0,0,0.08);
-}
-
-@keyframes fadeIn {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
+.post-card:hover {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.12);
 }
 
 .post-header {
@@ -827,18 +837,6 @@ img {
     font-size: 15px;
     font-weight: 600;
     color: #050505;
-}
-
-/* Lazy loading blur-up effect */
-img.lazy {
-    filter: blur(20px);
-    background-color: #f0f0f0;
-    transition: filter 0.5s ease-out;
-}
-
-img.lazy.loaded {
-    filter: blur(0);
-    background-color: transparent;
 }
 
 /* ============================================
@@ -2209,3 +2207,27 @@ body.modal-open {
     }
 }
 
+/* ==========================================
+   TOASTIFY CUSTOM STYLES
+========================================== */
+.toastify {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    padding: 12px 20px;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: 500;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+/* Tippy.js custom theme for Facebook style */
+.tippy-box[data-theme~='facebook'] {
+    background-color: #050505;
+    color: white;
+    font-size: 13px;
+    border-radius: 6px;
+    padding: 4px 8px;
+}
+
+.tippy-box[data-theme~='facebook'][data-placement^='top'] > .tippy-arrow::before {
+    border-top-color: #050505;
+}

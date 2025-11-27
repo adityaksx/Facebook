@@ -1839,4 +1839,170 @@ body.modal-open {
   margin-top: 12px;
   font-size: 14px;
   color: #1877f2;
+  border: 1px solid #1877f2;
+}
+
+.view-likes-link {
+  color: #1877f2;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.view-likes-link:hover {
+  color: #166fe5;
+}
+
+.comment-item {
+  background-color: #f0f2f5;
+  padding: 10px 12px;
+  border-radius: 18px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.comment-content {
+  flex: 1;
+}
+
+.admin-delete-comment-btn {
+  background-color: #ff4444;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.admin-delete-comment-btn:hover {
+  background-color: #cc0000;
+}
+
+/* Admin Edit/Add Post Modal */
+.admin-edit-modal {
+  position: fixed;
+  z-index: 10000;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0,0,0,0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow-y: auto;
+}
+
+.admin-edit-modal-content {
+  background-color: white;
+  padding: 30px;
+  border-radius: 12px;
+  width: 600px;
+  max-width: 90%;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.admin-edit-modal-content h2 {
+  margin-bottom: 20px;
+  color: #1877f2;
+}
+
+.admin-edit-modal-content label {
+  display: block;
+  font-weight: 600;
+  margin-top: 15px;
+  margin-bottom: 5px;
+  color: #050505;
+}
+
+.admin-edit-modal-content textarea,
+.admin-edit-modal-content input[type="text"] {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  font-size: 15px;
+  font-family: inherit;
+  margin-bottom: 10px;
+}
+
+.admin-save-btn,
+.admin-cancel-btn {
+  padding: 12px 24px;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 20px;
+  margin-right: 10px;
+}
+
+.admin-save-btn {
+  background-color: #42b72a;
+  color: white;
+}
+
+.admin-save-btn:hover {
+  background-color: #36a420;
+}
+
+.admin-cancel-btn {
+  background-color: #e4e6eb;
+  color: #050505;
+}
+
+.admin-cancel-btn:hover {
+  background-color: #d8dadf;
+}
+
+.admin-edit-close {
+  float: right;
+  font-size: 28px;
+  font-weight: bold;
+  cursor: pointer;
+  color: #65676b;
+}
+
+.admin-edit-close:hover {
+  color: #1877f2;
+}
+
+/* Admin Post Controls */
+.admin-post-controls {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.admin-edit-post-btn,
+.admin-delete-post-btn {
+  padding: 6px 12px;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.admin-edit-post-btn {
+  background-color: #1877f2;
+  color: white;
+}
+
+.admin-edit-post-btn:hover {
+  background-color: #166fe5;
+}
+
+.admin-delete-post-btn {
+  background-color: #ff4444;
+  color: white;
+}
+
+.admin-delete-post-btn:hover {
+  background-color: #cc0000;
 }

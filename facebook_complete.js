@@ -20,40 +20,56 @@ const MAX_TRANSLATIONS_PER_MINUTE = 10;
 
 // Generate or retrieve user ID
 function getUserId() {
-  let userId = localStorage.getItem('fb_user_id');
-  if (!userId) {
-    userId = 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-    localStorage.setItem('fb_user_id', userId);
-    localStorage.setItem('fb_session_start', new Date().toISOString());
-  }
-  return userId;
+    let userId = localStorage.getItem('fb_user_id');
+    if (!userId) {
+        userId = 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+        localStorage.setItem('fb_user_id', userId);
+        localStorage.setItem('fb_session_start', new Date().toISOString());
+    }
+    return userId;
 }
 
 // Get or prompt for username (only when first interaction happens)
 function getUsername() {
-  let username = localStorage.getItem('fb_username');
-  if (!username) {
-    username = prompt('Enter your name (optional - you can skip):');
-    if (!username || username.trim() === '') {
-      username = 'Anonymous_' + Math.random().toString(36).substr(2, 5);
+    let username = localStorage.getItem('fb_username');
+    if (!username) {
+        username = prompt('Enter your name (optional - you can skip):');
+        if (!username || username.trim() === '') {
+            username = 'Anonymous_' + Math.random().toString(36).substr(2, 5);
+        }
+        localStorage.setItem('fb_username', username.trim());
     }
-    localStorage.setItem('fb_username', username.trim());
-  }
-  return username;
+    return username;
 }
 
 // Track user activity
-function logUserActivity(action, postId) {
-  const userId = getUserId();
-  const username = getUsername();
-  console.log('User Activity:', {
-    userId,
-    username,
-    action,
-    postId,
-    timestamp: new Date().toISOString()
-  });
-  // You can extend this to send to a user_activity table if needed
+async function logUserActivity(action, postId) {
+    const userId = getUserId();
+    const username = getUsername();
+    console.log('User Activity:', {
+        userId,
+        username,
+        action,
+        postId,
+        timestamp: new Date().toISOString()
+    });
+
+    // Store in database
+    try {
+        await supabaseClient
+            .from('user_activity')
+        .insert([{
+            user_id: userId,
+            username: username,
+            action: action,
+            post_id: postId,
+            session_start: sessionStart,
+            created_at: new Date().toISOString()
+        }]);
+    } catch (err) {
+        console.error('Activity log error:', err);
+    }
+    // You can extend this to send to a user_activity table if needed
 }
 
 // ============================================
@@ -289,81 +305,188 @@ function renderPosts() {
 // LIKE HANDLING FUNCTION
 // ============================================
 async function handleLike(postId, buttonElement) {
-  const userId = getUserId();
-  const username = getUsername();
+    const userId = getUserId();
+    const username = getUsername();
   
-  // Add animation class
-  buttonElement.classList.add('liked');
-  buttonElement.style.color = '#1877f2';
+    // Add animation class
+    buttonElement.classList.add('liked');
+    buttonElement.style.color = '#1877f2';
   
-  // Animate
-  buttonElement.style.transform = 'scale(1.2)';
-  setTimeout(() => {
-    buttonElement.style.transform = 'scale(1)';
-  }, 200);
+    // Animate
+    buttonElement.style.transform = 'scale(1.2)';
+    setTimeout(() => {
+        buttonElement.style.transform = 'scale(1)';
+    }, 200);
   
-  try {
-    const { data, error } = await supabaseClient
-      .from('likes')
-      .insert([{
-        post_id: postId,
-        user_id: userId,
-        username: username,
-        created_at: new Date().toISOString()
-      }]);
+    try {
+        const { data, error } = await supabaseClient
+        .from('likes')
+        .insert([{
+            post_id: postId,
+            user_id: userId,
+            username: username,
+            created_at: new Date().toISOString()
+        }]);
     
-    if (error) {
-      console.error('Error inserting like:', error);
-      alert('Could not save like. Please try again.');
-      buttonElement.classList.remove('liked');
-      buttonElement.style.color = '#65676b';
-    } else {
-      console.log('Like saved successfully');
-      logUserActivity('LIKE', postId);
+        if (error) {
+            console.error('Error inserting like:', error);
+            alert('Could not save like. Please try again.');
+            buttonElement.classList.remove('liked');
+            buttonElement.style.color = '#65676b';
+        } else {
+            console.log('Like saved successfully');
+            logUserActivity('LIKE', postId);
+        }
+    } catch (err) {
+        console.error('Like error:', err);
     }
-  } catch (err) {
-    console.error('Like error:', err);
-  }
+}
+
+async function loadLikeCount(postId, element) {
+    try {
+        // Fetch all likes for this post
+        const { data, error, count } = await supabaseClient
+        .from('likes')
+        .select('id, username, created_at, user_id', { count: 'exact' })
+        .eq('post_id', postId)
+        .order('created_at', { ascending: false });
+    
+        if (error) {
+            console.error('Error loading likes:', error);
+            element.innerHTML = '❌ Error loading likes';
+            return;
+        }
+    
+        const likeCount = count || 0;
+    
+        if (likeCount === 0) {
+        element.innerHTML = '👍 <strong>0 Likes</strong>';
+        element.style.cursor = 'default';
+        return;
+        }
+    
+        element.innerHTML = `👍 <strong>${likeCount} Like${likeCount !== 1 ? 's' : ''}</strong> | <span class="view-likes-link">Click to see who liked</span>`;
+        element.style.cursor = 'pointer';
+    
+        element.onclick = function(e) {
+            e.stopPropagation();
+            showLikeDetails(postId, data);
+        };
+    
+        console.log(`Loaded ${likeCount} likes for post ${postId}`);
+    
+    } catch (err) {
+        console.error('Like count error:', err);
+        element.innerHTML = '❌ Error loading likes';
+    }
+}
+
+
+function showLikeDetails(postId, likes) {
+    if (!likes || likes.length === 0) {
+        alert('No likes yet');
+        return;
+    }
+  
+    let details = `👍 ${likes.length} Like${likes.length !== 1 ? 's' : ''} for this post:\n\n`;
+    likes.forEach((like, index) => {
+        const time = new Date(like.created_at).toLocaleString('en-IN', {
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+        details += `${index + 1}. ${like.username || 'Anonymous'}\n   Liked at: ${time}\n\n`;
+    });
+  
+    alert(details);
 }
 
 // ============================================
 // COMMENT FUNCTIONS
 // ============================================
 async function loadComments(postId, containerElement) {
-  const { data, error } = await supabaseClient
-    .from('comments')
-    .select('*')
-    .eq('post_id', postId)
-    .order('created_at', { ascending: true });
+    const { data, error } = await supabaseClient
+        .from('comments')
+        .select('*')
+        .eq('post_id', postId)
+        .order('created_at', { ascending: true });
   
-  if (error) {
-    console.error('Error loading comments:', error);
+    if (error) {
+        console.error('Error loading comments:', error);
+        return;
+    }
+  
+    containerElement.innerHTML = '';
+  
+    if (data && data.length > 0) {
+        data.forEach(comment => {
+            const commentDiv = document.createElement('div');
+            commentDiv.className = 'comment-item';
+            commentDiv.setAttribute('data-comment-id', comment.id);
+      
+            const time = new Date(comment.created_at).toLocaleString('en-IN', {
+                month: 'short',
+                day: 'numeric',
+                hour: 'numeric',
+                minute: 'numeric'
+            });
+      
+            commentDiv.innerHTML = `
+                <div class="comment-content">
+                <div class="comment-author">${sanitizeHTML(comment.username || 'Anonymous')}</div>
+                <div class="comment-text">${sanitizeHTML(comment.message)}</div>
+                <div class="comment-time">${time}</div>
+                </div>
+            ${isAdmin ? `<button class="admin-delete-comment-btn" onclick="deleteComment('${comment.id}', '${postId}')">🗑️ Delete</button>` : ''}
+        `;
+      
+        containerElement.appendChild(commentDiv);
+        });
+    } else {
+        containerElement.innerHTML = '<div class="no-comments">No comments yet. Be the first!</div>';
+    }
+}
+
+async function deleteComment(commentId, postId) {
+  if (!isAdmin) {
+    alert('Only admins can delete comments');
     return;
   }
   
-  containerElement.innerHTML = '';
+  if (!confirm('Are you sure you want to delete this comment?')) {
+    return;
+  }
   
-  if (data && data.length > 0) {
-    data.forEach(comment => {
-      const commentDiv = document.createElement('div');
-      commentDiv.className = 'comment-item';
-      const time = new Date(comment.created_at).toLocaleString('en-IN', {
-        month: 'short',
-        day: 'numeric',
-        hour: 'numeric',
-        minute: 'numeric'
-      });
-      commentDiv.innerHTML = `
-        <div class="comment-author">${sanitizeHTML(comment.username || 'Anonymous')}</div>
-        <div class="comment-text">${sanitizeHTML(comment.message)}</div>
-        <div class="comment-time">${time}</div>
-      `;
-      containerElement.appendChild(commentDiv);
-    });
-  } else {
-    containerElement.innerHTML = '<div class="no-comments">No comments yet. Be the first!</div>';
+  try {
+    const { error } = await supabaseClient
+      .from('comments')
+      .delete()
+      .eq('id', commentId);
+    
+    if (error) {
+      console.error('Error deleting comment:', error);
+      alert('Failed to delete comment');
+      return;
+    }
+    
+    alert('Comment deleted successfully');
+    
+    // Reload comments
+    const commentsList = document.querySelector(`[data-post-id="${postId}"] .comments-list`);
+    if (commentsList) {
+      loadComments(postId, commentsList);
+    }
+  } catch (err) {
+    console.error('Delete comment error:', err);
+    alert('Failed to delete comment');
   }
 }
+
+// Make function global so onclick can access it
+window.deleteComment = deleteComment;
+
 
 async function submitComment(postId, message, containerElement) {
   const userId = getUserId();
@@ -393,39 +516,157 @@ async function submitComment(postId, message, containerElement) {
   }
 }
 
-async function loadLikeCount(postId, element) {
-  const { data, error, count } = await supabaseClient
-    .from('likes')
-    .select('*', { count: 'exact' })
-    .eq('post_id', postId);
-  
-  if (error) {
-    element.textContent = 'Error loading likes';
+// ============================================
+// ADMIN POST MANAGEMENT FUNCTIONS
+// ============================================
+
+async function editPost(postId) {
+  if (!isAdmin) {
+    alert('Only admins can edit posts');
     return;
   }
   
-  element.innerHTML = `<strong>👍 ${count || 0} Likes</strong> | Click to see who liked`;
-  element.style.cursor = 'pointer';
-  element.onclick = function() {
-    showLikeDetails(postId, data);
-  };
-}
-
-function showLikeDetails(postId, likes) {
-  if (!likes || likes.length === 0) {
-    alert('No likes yet');
+  // Fetch current post data
+  const { data: post, error } = await supabaseClient
+    .from('posts')
+    .select('*, images(*), post_videos(*)')
+    .eq('id', postId)
+    .single();
+  
+  if (error || !post) {
+    alert('Error loading post data');
     return;
   }
   
-  let details = `Likes for this post (${likes.length}):\n\n`;
-  likes.forEach(like => {
-    const time = new Date(like.created_at).toLocaleString();
-    details += `${like.username || 'Anonymous'} - ${time}\n`;
-  });
+  // Create edit modal
+  const editModal = document.createElement('div');
+  editModal.className = 'admin-edit-modal';
+  editModal.innerHTML = `
+    <div class="admin-edit-modal-content">
+      <span class="admin-edit-close" onclick="this.parentElement.parentElement.remove()">&times;</span>
+      <h2>Edit Post</h2>
+      
+      <label>Content:</label>
+      <textarea id="edit-post-content" rows="6">${sanitizeHTML(post.content || '')}</textarea>
+      
+      <label>Timestamp (YYYY-MM-DD HH:MM:SS):</label>
+      <input type="text" id="edit-post-timestamp" value="${post.timestamp || ''}" />
+      
+      <label>Post Type:</label>
+      <input type="text" id="edit-post-type" value="${post.type || ''}" placeholder="e.g., status, photo, video" />
+      
+      <div class="edit-images-section">
+        <h3>Images (comma-separated URLs):</h3>
+        <textarea id="edit-post-images" rows="3">${post.images ? post.images.map(img => img.url).join(',\n') : ''}</textarea>
+      </div>
+      
+      <div class="edit-videos-section">
+        <h3>Videos (comma-separated URLs):</h3>
+        <textarea id="edit-post-videos" rows="3">${post.post_videos ? post.post_videos.map(vid => vid.url).join(',\n') : ''}</textarea>
+      </div>
+      
+      <button class="admin-save-btn" onclick="savePostEdit('${postId}')">💾 Save Changes</button>
+      <button class="admin-cancel-btn" onclick="this.parentElement.parentElement.remove()">❌ Cancel</button>
+    </div>
+  `;
   
-  alert(details);
+  document.body.appendChild(editModal);
+  editModal.style.display = 'flex';
 }
 
+async function savePostEdit(postId) {
+  const content = document.getElementById('edit-post-content').value;
+  const timestamp = document.getElementById('edit-post-timestamp').value;
+  const type = document.getElementById('edit-post-type').value;
+  const imagesText = document.getElementById('edit-post-images').value;
+  const videosText = document.getElementById('edit-post-videos').value;
+  
+  try {
+    // Update post
+    const { error: postError } = await supabaseClient
+      .from('posts')
+      .update({
+        content: content,
+        timestamp: timestamp,
+        type: type
+      })
+      .eq('id', postId);
+    
+    if (postError) throw postError;
+    
+    // Update images
+    // First delete existing images
+    await supabaseClient.from('images').delete().eq('post_id', postId);
+    
+    // Insert new images
+    if (imagesText.trim()) {
+      const imageUrls = imagesText.split(',').map(url => url.trim()).filter(url => url);
+      const imageInserts = imageUrls.map(url => ({
+        post_id: postId,
+        url: url
+      }));
+      
+      if (imageInserts.length > 0) {
+        await supabaseClient.from('images').insert(imageInserts);
+      }
+    }
+    
+    // Update videos
+    await supabaseClient.from('post_videos').delete().eq('post_id', postId);
+    
+    if (videosText.trim()) {
+      const videoUrls = videosText.split(',').map(url => url.trim()).filter(url => url);
+      const videoInserts = videoUrls.map(url => ({
+        post_id: postId,
+        url: url
+      }));
+      
+      if (videoInserts.length > 0) {
+        await supabaseClient.from('post_videos').insert(videoInserts);
+      }
+    }
+    
+    alert('Post updated successfully!');
+    document.querySelector('.admin-edit-modal').remove();
+    location.reload();
+    
+  } catch (err) {
+    console.error('Error updating post:', err);
+    alert('Failed to update post: ' + err.message);
+  }
+}
+
+async function deletePost(postId) {
+  if (!isAdmin) {
+    alert('Only admins can delete posts');
+    return;
+  }
+  
+  if (!confirm('Are you sure you want to delete this post? This action cannot be undone!')) {
+    return;
+  }
+  
+  try {
+    const { error } = await supabaseClient
+      .from('posts')
+      .delete()
+      .eq('id', postId);
+    
+    if (error) throw error;
+    
+    alert('Post deleted successfully!');
+    location.reload();
+    
+  } catch (err) {
+    console.error('Error deleting post:', err);
+    alert('Failed to delete post: ' + err.message);
+  }
+}
+
+// Make functions global
+window.editPost = editPost;
+window.savePostEdit = savePostEdit;
+window.deletePost = deletePost;
 
 function createPostCard(post) {
     const card = document.createElement('div');
@@ -468,6 +709,17 @@ function createPostCard(post) {
     header.appendChild(postInfo);
     header.appendChild(postOptions);
     card.appendChild(header);
+
+    // ADMIN CONTROLS (Edit, Delete)
+    if (isAdmin) {
+        const adminControls = document.createElement('div');
+        adminControls.className = 'admin-post-controls';
+        adminControls.innerHTML = `
+            <button class="admin-edit-post-btn" onclick="editPost('${post.id}')">✏️ Edit</button>
+            <button class="admin-delete-post-btn" onclick="deletePost('${post.id}')">🗑️ Delete</button>
+        `;
+        header.appendChild(adminControls);  
+    }
 
     // CONTENT
     if (post.content) {
@@ -637,17 +889,26 @@ function createPostCard(post) {
         card.appendChild(videosDiv);
     }
 
-    // LIKE COUNT (Admin only)
+// LIKE COUNT (Admin only) - DEBUG VERSION
+    console.log('Creating post card, isAdmin:', isAdmin, 'postId:', post.id);
+
     if (isAdmin) {
-        const likeCountDiv = document.createElement('div');
-        likeCountDiv.className = 'admin-like-count';
-        likeCountDiv.textContent = 'Loading likes...';
-        likeCountDiv.setAttribute('data-post-id', post.id);
-        card.appendChild(likeCountDiv);
+    console.log('Admin detected! Creating like count for post:', post.id);
   
-        // Load like count
+    const likeCountDiv = document.createElement('div');
+    likeCountDiv.className = 'admin-like-count';
+    likeCountDiv.innerHTML = '👍 Loading likes...';
+    likeCountDiv.setAttribute('data-post-id', post.id);
+  
+    card.appendChild(likeCountDiv);
+  
+    // Load like count after a small delay
+    setTimeout(() => {
+        console.log('Loading likes for post:', post.id);
         loadLikeCount(post.id, likeCountDiv);
+    }, 100);
     }
+
 
 
     // ============================================
@@ -1687,146 +1948,262 @@ let isAdmin = false;
 let currentUser = null;
 
 document.addEventListener('DOMContentLoaded', async function() {
-  // Check if user is already logged in
-  const { data: { session } } = await supabaseClient.auth.getSession();
+    // Check if user is already logged in
+    const { data: { session } } = await supabaseClient.auth.getSession();
   
-  if (session) {
-    currentUser = session.user;
-    await checkAdminStatus();
-  }
+    if (session) {
+        currentUser = session.user;
+        await checkAdminStatus();
+    }
   
-  // Admin login button
-  const adminBtn = document.getElementById('adminLoginBtn');
-  const adminModal = document.getElementById('adminLoginModal');
-  const adminClose = document.querySelector('.admin-close');
-  const adminSubmit = document.getElementById('adminLoginSubmit');
+    // Admin login button
+    const adminBtn = document.getElementById('adminLoginBtn');
+    const adminModal = document.getElementById('adminLoginModal');
+    const adminClose = document.querySelector('.admin-close');
+    const adminSubmit = document.getElementById('adminLoginSubmit');
   
-  if (adminBtn) {
-    adminBtn.onclick = function() {
-      if (isAdmin) {
-        logoutAdmin();
-      } else {
-        adminModal.style.display = 'flex';
-      }
-    };
-  }
-  
-  if (adminClose) {
-    adminClose.onclick = function() {
-      adminModal.style.display = 'none';
-    };
-  }
-  
-  if (adminSubmit) {
-    adminSubmit.onclick = async function() {
-      const email = document.getElementById('adminEmail').value.trim();
-      const password = document.getElementById('adminPassword').value;
-      const errorDiv = document.getElementById('adminLoginError');
-      
-      if (!email || !password) {
-        errorDiv.textContent = 'Please enter both email and password';
-        return;
-      }
-      
-      // Show loading
-      adminSubmit.disabled = true;
-      adminSubmit.textContent = 'Logging in...';
-      errorDiv.textContent = '';
-      
-      try {
-        // Sign in with Supabase Auth
-        const { data, error } = await supabaseClient.auth.signInWithPassword({
-          email: email,
-          password: password
-        });
-        
-        if (error) {
-          errorDiv.textContent = 'Invalid email or password';
-          adminSubmit.disabled = false;
-          adminSubmit.textContent = 'Login';
-          return;
+    if (adminBtn) {
+        adminBtn.onclick = function() {
+        if (isAdmin) {
+            logoutAdmin();
+        } else {
+            adminModal.style.display = 'flex';
         }
-        
-        currentUser = data.user;
-        
-        // Check if user is admin
-        const isAdminUser = await checkAdminStatus();
-        
-        if (!isAdminUser) {
-          // User logged in but is not admin
-          await supabaseClient.auth.signOut();
-          errorDiv.textContent = 'You do not have admin privileges';
-          adminSubmit.disabled = false;
-          adminSubmit.textContent = 'Login';
-          return;
-        }
-        
-        // Success
+        };
+    }
+  
+    if (adminClose) {
+        adminClose.onclick = function() {
         adminModal.style.display = 'none';
+        };
+    }
+  
+    if (adminSubmit) {
+        adminSubmit.onclick = async function() {
+        const email = document.getElementById('adminEmail').value.trim();
+        const password = document.getElementById('adminPassword').value;
+        const errorDiv = document.getElementById('adminLoginError');
+      
+        if (!email || !password) {
+            errorDiv.textContent = 'Please enter both email and password';
+            return;
+        }
+      
+        // Show loading
+        adminSubmit.disabled = true;
+        adminSubmit.textContent = 'Logging in...';
         errorDiv.textContent = '';
-        alert(`Welcome Admin! (${email})`);
-        location.reload();
+      
+        try {
+            // Sign in with Supabase Auth
+            const { data, error } = await supabaseClient.auth.signInWithPassword({
+            email: email,
+            password: password
+            });
         
-      } catch (err) {
-        console.error('Login error:', err);
-        errorDiv.textContent = 'Login failed. Please try again.';
-        adminSubmit.disabled = false;
-        adminSubmit.textContent = 'Login';
-      }
-    };
-  }
+            if (error) {
+            errorDiv.textContent = 'Invalid email or password';
+            adminSubmit.disabled = false;
+            adminSubmit.textContent = 'Login';
+            return;
+            }   
+        
+            currentUser = data.user;
+        
+            // Check if user is admin
+            const isAdminUser = await checkAdminStatus();
+        
+            if (!isAdminUser) {
+                // User logged in but is not admin
+                await supabaseClient.auth.signOut();
+                errorDiv.textContent = 'You do not have admin privileges';
+                adminSubmit.disabled = false;
+                adminSubmit.textContent = 'Login';
+                return;
+            }
+        
+            // Success
+            adminModal.style.display = 'none';
+            errorDiv.textContent = '';
+            alert(`Welcome Admin! (${email})`);
+            location.reload();
+        
+        } catch (err) {
+            console.error('Login error:', err);
+            errorDiv.textContent = 'Login failed. Please try again.';
+            adminSubmit.disabled = false;
+            adminSubmit.textContent = 'Login';
+        }
+        };
+    }
 });
 
 // Check if current user is admin
 async function checkAdminStatus() {
-  if (!currentUser) {
-    isAdmin = false;
-    return false;
-  }
+    if (!currentUser) {
+        isAdmin = false;
+        return false;
+    }
   
-  try {
-    const { data, error } = await supabaseClient
-      .from('admin_roles')
-      .select('user_id')
-      .eq('user_id', currentUser.id)
-      .single();
+    try {
+        const { data, error } = await supabaseClient
+        .from('admin_roles')
+        .select('user_id')
+        .eq('user_id', currentUser.id)
+        .single();
     
     if (data && !error) {
-      isAdmin = true;
-      localStorage.setItem('fb_admin', 'true');
-      localStorage.setItem('fb_admin_email', currentUser.email);
-      enableAdminFeatures();
-      return true;
+        isAdmin = true;
+        localStorage.setItem('fb_admin', 'true');
+        localStorage.setItem('fb_admin_email', currentUser.email);
+        enableAdminFeatures();
+        return true;
     } else {
-      isAdmin = false;
-      localStorage.removeItem('fb_admin');
-      return false;
+        isAdmin = false;
+        localStorage.removeItem('fb_admin');
+        return false;
     }
-  } catch (err) {
-    console.error('Admin check error:', err);
-    isAdmin = false;
-    return false;
-  }
+    } catch (err) {
+        console.error('Admin check error:', err);
+        isAdmin = false;
+        return false;
+    }
 }
 
 function enableAdminFeatures() {
-  // Change admin button to logout
-  const adminBtn = document.getElementById('adminLoginBtn');
-  if (adminBtn) {
-    adminBtn.title = 'Admin Logout';
-    adminBtn.style.backgroundColor = '#42b72a';
-  }
+    // Change admin button to logout
+    const adminBtn = document.getElementById('adminLoginBtn');
+    if (adminBtn) {
+        adminBtn.title = 'Admin Logout';
+        adminBtn.style.backgroundColor = '#42b72a';
+    }
   
-  // Show like counts (already implemented in createPostCard)
-  document.body.classList.add('admin-mode');
+    // Show admin add post button
+    const addPostBtn = document.getElementById('adminAddPostBtn');
+    if (addPostBtn) {
+        addPostBtn.style.display = 'flex';
+        addPostBtn.onclick = showAddPostModal;
+    }
+  
+    // Show like counts (already implemented in createPostCard)
+    document.body.classList.add('admin-mode');
+
+    // DEBUG: Log admin status
+    console.log('✅ ADMIN MODE ENABLED');
+    console.log('isAdmin:', isAdmin);
+    console.log('currentUser:', currentUser);
 }
 
+function showAddPostModal() {
+    const addModal = document.createElement('div');
+    addModal.className = 'admin-edit-modal';
+    addModal.innerHTML = `
+        <div class="admin-edit-modal-content">
+        <span class="admin-edit-close" onclick="this.parentElement.parentElement.remove()">&times;</span>
+        <h2>Create New Post</h2>
+      
+        <label>Content:</label>
+        <textarea id="new-post-content" rows="6" placeholder="What's on your mind?"></textarea>
+      
+        <label>Timestamp (YYYY-MM-DD HH:MM:SS):</label>
+        <input type="text" id="new-post-timestamp" value="${new Date().toISOString().slice(0, 19).replace('T', ' ')}" />
+      
+        <label>Post Type:</label>
+        <input type="text" id="new-post-type" value="status" placeholder="e.g., status, photo, video" />
+      
+        <div class="edit-images-section">
+            <h3>Images (comma-separated URLs):</h3>
+            <textarea id="new-post-images" rows="3" placeholder="https://example.com/image1.jpg,&#10;https://example.com/image2.jpg"></textarea>
+        </div>
+      
+        <div class="edit-videos-section">
+            <h3>Videos (comma-separated URLs):</h3>
+            <textarea id="new-post-videos" rows="3" placeholder="https://drive.google.com/file/d/xxx/view"></textarea>
+        </div>
+      
+        <button class="admin-save-btn" onclick="saveNewPost()">📝 Create Post</button>
+        <button class="admin-cancel-btn" onclick="this.parentElement.parentElement.remove()">❌ Cancel</button>
+        </div>
+    `;
+  
+    document.body.appendChild(addModal);
+    addModal.style.display = 'flex';
+}
+
+async function saveNewPost() {
+    const content = document.getElementById('new-post-content').value;
+    const timestamp = document.getElementById('new-post-timestamp').value;
+    const type = document.getElementById('new-post-type').value;
+    const imagesText = document.getElementById('new-post-images').value;
+    const videosText = document.getElementById('new-post-videos').value;
+  
+    if (!content.trim()) {
+        alert('Please enter post content');
+        return;
+    }
+  
+    try {
+        // Insert post
+        const { data: newPost, error: postError } = await supabaseClient
+        .from('posts')
+        .insert([{
+            content: content,
+            timestamp: timestamp,
+            type: type,
+            created_at: new Date().toISOString()
+        }])
+        .select()
+        .single();
+    
+        if (postError) throw postError;
+    
+        const postId = newPost.id;
+    
+        // Insert images
+        if (imagesText.trim()) {
+            const imageUrls = imagesText.split(',').map(url => url.trim()).filter(url => url);
+            const imageInserts = imageUrls.map(url => ({
+            post_id: postId,
+            url: url
+        }));
+      
+            if (imageInserts.length > 0) {
+                await supabaseClient.from('images').insert(imageInserts);
+            }
+        }
+    
+        // Insert videos
+        if (videosText.trim()) {
+            const videoUrls = videosText.split(',').map(url => url.trim()).filter(url => url);
+            const videoInserts = videoUrls.map(url => ({
+            post_id: postId,
+            url: url
+        }));
+      
+            if (videoInserts.length > 0) {
+                await supabaseClient.from('post_videos').insert(videoInserts);
+            }
+        }
+    
+        alert('Post created successfully!');
+        document.querySelector('.admin-edit-modal').remove();
+        location.reload();
+    
+    } catch (err) {
+        console.error('Error creating post:', err);
+        alert('Failed to create post: ' + err.message);
+    }
+}
+
+window.showAddPostModal = showAddPostModal;
+window.saveNewPost = saveNewPost;
+
 async function logoutAdmin() {
-  await supabaseClient.auth.signOut();
-  localStorage.removeItem('fb_admin');
-  localStorage.removeItem('fb_admin_email');
-  isAdmin = false;
-  currentUser = null;
-  alert('Logged out successfully');
-  location.reload();
+    await supabaseClient.auth.signOut();
+    localStorage.removeItem('fb_admin');
+    localStorage.removeItem('fb_admin_email');
+    isAdmin = false;
+    currentUser = null;
+    alert('Logged out successfully');
+    location.reload();
 }

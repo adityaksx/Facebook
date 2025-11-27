@@ -2307,5 +2307,115 @@ async function handleComment(postId, commentsDiv) {
     }
 }
 
+// ==========================================
+// MOBILE HAMBURGER MENU SETUP
+// ==========================================
+
+// ==========================================
+// MOBILE HAMBURGER MENU SETUP
+// ==========================================
+
+function setupMobileMenu() {
+    console.log('🍔 Setting up mobile menu...'); // Debug log
+    
+    const menuBtn = document.getElementById('mobileMenuBtn');
+    const dropdown = document.getElementById('mobileDropdown');
+    
+    console.log('Hamburger button:', menuBtn); // Debug log
+    console.log('Dropdown menu:', dropdown); // Debug log
+    
+    if (!menuBtn || !dropdown) {
+        console.error('❌ Hamburger menu elements not found!');
+        return;
+    }
+    
+    console.log('✅ Elements found, attaching listeners...');
+    
+    // Toggle menu
+    menuBtn.addEventListener('click', function(e) {
+        console.log('🔄 Hamburger clicked!');
+        e.stopPropagation();
+        menuBtn.classList.toggle('active');
+        dropdown.classList.toggle('active');
+    });
+    
+    // Close when clicking outside
+    document.addEventListener('click', function(e) {
+        if (!dropdown.contains(e.target) && !menuBtn.contains(e.target)) {
+            menuBtn.classList.remove('active');
+            dropdown.classList.remove('active');
+        }
+    });
+    
+    // Close when clicking menu item
+    dropdown.querySelectorAll('.mobile-menu-item').forEach(item => {
+        item.addEventListener('click', function() {
+            console.log('Menu item clicked');
+            menuBtn.classList.remove('active');
+            dropdown.classList.remove('active');
+        });
+    });
+    
+    // Connect mobile buttons to desktop buttons
+    const notificationBtnMobile = document.getElementById('notificationBtnMobile');
+    const notificationBtnDesktop = document.getElementById('notificationBtn');
+    if (notificationBtnMobile && notificationBtnDesktop) {
+        notificationBtnMobile.onclick = function() {
+            notificationBtnDesktop.click();
+        };
+    }
+    
+    const adminLoginBtnMobile = document.getElementById('adminLoginBtnMobile');
+    const adminLoginBtnDesktop = document.getElementById('adminLoginBtn');
+    if (adminLoginBtnMobile && adminLoginBtnDesktop) {
+        adminLoginBtnMobile.onclick = function() {
+            adminLoginBtnDesktop.click();
+        };
+    }
+    
+    const adminAddPostBtnMobile = document.getElementById('adminAddPostBtnMobile');
+    const adminAddPostBtnDesktop = document.getElementById('adminAddPostBtn');
+    if (adminAddPostBtnMobile && adminAddPostBtnDesktop) {
+        adminAddPostBtnMobile.onclick = function() {
+            adminAddPostBtnDesktop.click();
+        };
+        
+        // Sync visibility
+        syncAddPostButtonVisibility();
+    }
+    
+    console.log('✅ Mobile menu setup complete!');
+}
+
+// Sync Add Post button visibility
+function syncAddPostButtonVisibility() {
+    const adminAddPostBtnDesktop = document.getElementById('adminAddPostBtn');
+    const adminAddPostBtnMobile = document.getElementById('adminAddPostBtnMobile');
+    
+    if (!adminAddPostBtnDesktop || !adminAddPostBtnMobile) return;
+    
+    // Create observer
+    const observer = new MutationObserver(function() {
+        const desktopVisible = adminAddPostBtnDesktop.style.display !== 'none';
+        adminAddPostBtnMobile.style.display = desktopVisible ? 'flex' : 'none';
+    });
+    
+    observer.observe(adminAddPostBtnDesktop, {
+        attributes: true,
+        attributeFilter: ['style']
+    });
+    
+    // Initial sync
+    const desktopVisible = adminAddPostBtnDesktop.style.display !== 'none';
+    adminAddPostBtnMobile.style.display = desktopVisible ? 'flex' : 'none';
+}
+
+// ✅ IMPORTANT: Call this AFTER everything else loads
+// Add a small delay to ensure DOM is ready
+setTimeout(function() {
+    setupMobileMenu();
+}, 500);
+
+
 
 

@@ -1293,8 +1293,14 @@ body.modal-open {
         font-size: 18px;
     }
 
-    .nav-right {
-    display: none !important;
+    /* Hide desktop nav icons */
+    .nav-right > .nav-icon {
+        display: none !important;
+    }
+
+    /* Show hamburger menu button */
+    .mobile-menu-btn {
+        display: flex !important;
     }
 
     .cover-photo {
@@ -1530,6 +1536,8 @@ body.modal-open {
 
 /* Extra Small (below 480px) */
 @media (max-width: 480px) {
+
+
     .nav-center .search-bar {
         width: 120px;
     }
@@ -1972,80 +1980,232 @@ body.modal-open {
   color: #1877f2;
 }
 
-/* Admin Post Controls */
+/* Admin Post Controls - More Compact */
 .admin-post-controls {
-  display: flex;
-  gap: 8px;
-  margin-left: auto;
+    display: flex;
+    gap: 6px;
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    z-index: 10;
 }
 
 .admin-edit-post-btn,
 .admin-delete-post-btn {
-  padding: 6px 12px;
-  border: none;
-  border-radius: 6px;
-  font-size: 13px;
-  cursor: pointer;
-  font-weight: 600;
+    padding: 6px 10px;
+    border: none;
+    border-radius: 6px;
+    font-size: 12px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.2s;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* Make sure post header doesn't overlap with admin buttons */
+.admin-post-header {
+    position: relative;
+    padding-right: 160px; /* Space for admin buttons */
 }
 
 .admin-edit-post-btn {
-  background-color: #1877f2;
-  color: white;
+    background-color: #1877f2;
+    color: white;
 }
 
 .admin-edit-post-btn:hover {
-  background-color: #166fe5;
+    background-color: #166fe5;
+    transform: translateY(-1px);
+    box-shadow: 0 3px 6px rgba(0,0,0,0.15);
 }
 
 .admin-delete-post-btn {
-  background-color: #ff4444;
-  color: white;
+    background-color: #ff4444;
+    color: white;
 }
 
 .admin-delete-post-btn:hover {
-  background-color: #cc0000;
+    background-color: #cc0000;
+    transform: translateY(-1px);
+    box-shadow: 0 3px 6px rgba(0,0,0,0.15);
 }
 
 /* ==========================================
    ADMIN LIKE COUNT - CRITICAL STYLES
    ========================================== */
+/* Admin Like Count - Cleaner Design */
 .admin-like-count {
-  display: block !important;
-  visibility: visible !important;
-  opacity: 1 !important;
-  background-color: #e7f3ff !important;
-  padding: 16px !important;
-  border-radius: 8px !important;
-  margin: 16px 0 !important;
-  font-size: 16px !important;
-  color: #1877f2 !important;
-  border: 2px solid #1877f2 !important;
-  font-weight: 700 !important;
-  text-align: center !important;
-  box-shadow: 0 2px 8px rgba(24, 119, 242, 0.15) !important;
-  position: relative !important;
-  z-index: 10 !important;
-  width: auto !important;
-  max-width: 100% !important;
-  line-height: 1.5 !important;
+    background: linear-gradient(135deg, #e7f3ff 0%, #d4e9ff 100%) !important;
+    padding: 12px 16px !important;
+    border-radius: 10px !important;
+    margin: 12px 0 !important;
+    font-size: 14px !important;
+    color: #1877f2 !important;
+    border: 1px solid #b3d9ff !important;
+    font-weight: 600 !important;
+    text-align: center !important;
+    box-shadow: 0 2px 6px rgba(24, 119, 242, 0.1) !important;
+    transition: all 0.2s !important;
+}
+
+.admin-like-count:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 10px rgba(24, 119, 242, 0.15) !important;
 }
 
 .admin-like-count strong {
-  font-size: 18px !important;
-  color: #1877f2 !important;
+    font-size: 16px !important;
+    color: #1877f2 !important;
+    font-weight: 700 !important;
 }
 
 .view-likes-link {
-  color: #1877f2 !important;
-  text-decoration: underline !important;
-  cursor: pointer !important;
-  font-weight: 500 !important;
-  margin-left: 8px !important;
-  display: inline !important;
+    color: #1877f2 !important;
+    text-decoration: none !important;
+    cursor: pointer !important;
+    font-weight: 500 !important;
+    margin-left: 4px !important;
+    transition: color 0.2s !important;
 }
 
 .view-likes-link:hover {
-  color: #166fe5 !important;
-  text-decoration: none !important;
+    color: #166fe5 !important;
+    text-decoration: underline !important;
 }
+
+/* ==========================================
+   HAMBURGER MENU - MOBILE ONLY
+========================================== */
+
+/* Hamburger button - hidden on desktop */
+.mobile-menu-btn {
+    display: none;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 4px;
+    width: 40px;
+    height: 40px;
+    background: #e4e6eb;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    padding: 10px;
+    z-index: 1001;
+    transition: background 0.2s;
+    position: relative;
+}
+
+.mobile-menu-btn:hover {
+    background: #d8dadf;
+}
+
+.mobile-menu-btn span {
+    width: 20px;
+    height: 2px;
+    background: #050505;
+    border-radius: 2px;
+    transition: all 0.3s ease;
+    display: block;
+    position: relative;
+}
+
+/* Ensure all three lines show */
+.mobile-menu-btn span:nth-child(1) {
+    margin: 0;
+}
+
+.mobile-menu-btn span:nth-child(2) {
+    margin: 0;
+}
+
+.mobile-menu-btn span:nth-child(3) {
+    margin: 0;
+}
+
+/* Hamburger animation when open (X shape) */
+.mobile-menu-btn.active {
+    background: #d8dadf;
+}
+
+.mobile-menu-btn.active span:nth-child(1) {
+    transform: rotate(45deg) translate(6px, 6px);
+}
+
+.mobile-menu-btn.active span:nth-child(2) {
+    opacity: 0;
+    transform: translateX(-20px);
+}
+
+.mobile-menu-btn.active span:nth-child(3) {
+    transform: rotate(-45deg) translate(6px, -6px);
+}
+
+/* Mobile dropdown menu */
+.mobile-dropdown-menu {
+    display: none;
+    position: fixed;
+    top: 56px;
+    right: 0;
+    width: 250px;
+    background: white;
+    box-shadow: -2px 2px 15px rgba(0,0,0,0.15);
+    border-radius: 8px 0 0 8px;
+    padding: 8px 0;
+    z-index: 999;
+    max-height: calc(100vh - 70px);
+    overflow-y: auto;
+    transform: translateX(100%);
+    transition: transform 0.3s ease;
+}
+
+.mobile-dropdown-menu.active {
+    display: block;
+    transform: translateX(0);
+}
+
+.mobile-menu-item {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    padding: 12px 20px;
+    font-size: 16px;
+    color: #050505;
+    cursor: pointer;
+    transition: background 0.2s;
+    text-align: left;
+}
+
+.mobile-menu-item:hover {
+    background: #f0f2f5;
+}
+
+.mobile-menu-item:active {
+    background: #e4e6eb;
+}
+
+/* Show/hide on mobile */
+@media (max-width: 768px) {
+    /* Hide desktop nav icons */
+    .nav-right > .nav-icon {
+        display: none !important;
+    }
+    
+    /* Show hamburger */
+    .mobile-menu-btn {
+        display: flex !important;
+    }
+}
+
+@media (max-width: 480px) {
+    .mobile-dropdown-menu {
+        width: 200px;
+        top: 48px;
+    }
+    
+    .mobile-menu-item {
+        padding: 10px 16px;
+        font-size: 15px;
+    }
+}
+

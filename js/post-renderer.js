@@ -116,19 +116,40 @@ function createPostContent(post) {
   tempDiv.innerHTML = textDiv.innerHTML;
   document.body.appendChild(tempDiv);
 
+  // Measure heights
+  const visibleHeight = textDiv.clientHeight;          // what the user actually sees
+  const fullHeight = tempDiv.scrollHeight;            // full content height
+
+  // Controls: how many lines should be visible before truncation
   const lineHeight = parseFloat(getComputedStyle(textDiv).lineHeight) || 20;
   const maxVisibleHeight = lineHeight * 7;
 
-  if (tempDiv.scrollHeight > maxVisibleHeight + 5) {
-    const btn = document.createElement("button");
-    btn.className = "read-more-btn";
-    btn.textContent = "Read more";
-    btn.addEventListener("click", () => {
-      const expanded = textDiv.classList.toggle("expanded");
-      btn.textContent = expanded ? "Show less" : "Read more";
+  // Also require a minimum length so very short texts never get the button
+  const minCharsForReadMore = 140;
+  const plainTextLength = cleanedContent.replace(/<br\s*\/?>/gi, '').length;
+
+  // Show button only if:
+  // - content is taller than what we allow
+  // - AND visibly clipped (fullHeight > visibleHeight)
+  // - AND long enough in characters
+  const shouldHaveReadMore =
+    fullHeight > maxVisibleHeight + 5 &&
+    fullHeight > visibleHeight + 5 &&
+    plainTextLength > minCharsForReadMore;
+
+  if (shouldHaveReadMore) {
+    const btn = document.createElement('button');
+    btn.className = 'read-more-btn';
+    btn.textContent = 'Read more';
+
+    btn.addEventListener('click', () => {
+      const expanded = textDiv.classList.toggle('expanded');
+      btn.textContent = expanded ? 'Show less' : 'Read more';
     });
+
     contentDiv.appendChild(btn);
   }
+
 
   document.body.removeChild(tempDiv);
 

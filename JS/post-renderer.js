@@ -420,6 +420,12 @@ function renderPosts() {
             AOS.refresh();
             console.log('✅ AOS refreshed');
         }
+        
+        if (typeof initPhotoSwipe === 'function') {
+            initPhotoSwipe();
+            console.log('✅ PhotoSwipe reinitialized for new posts');
+        }
+
     });
 
     currentPage++;

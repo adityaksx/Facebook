@@ -4,12 +4,19 @@
 /**
  * Initialize PhotoSwipe lightbox with thumbnails and admin edit button
  */
+let currentLightbox = null;
+
 function initPhotoSwipe() {
     console.log('🔍 PhotoSwipe check:', typeof PhotoSwipeLightbox, typeof PhotoSwipe);
     
     if (typeof PhotoSwipeLightbox === 'undefined' || typeof PhotoSwipe === 'undefined') {
         console.error('❌ PhotoSwipe libraries not loaded!');
         return;
+    }
+
+    if (currentLightbox) {
+        currentLightbox.destroy();
+        currentLightbox = null;
     }
 
     const lightbox = new PhotoSwipeLightbox({
@@ -120,6 +127,7 @@ function initPhotoSwipe() {
     });
 
     lightbox.init();
+    currentLightbox = lightbox; 
     console.log('✅ PhotoSwipe lightbox initialized');
 }
 

@@ -28,6 +28,135 @@ function initPhotoSwipe() {
         bgOpacity: 0.95,
         loop: true
     });
+    
+    // Replace your current contentLoad handler with this improved one
+    lightbox.on('contentLoad', (e) => {
+        const slide = e.slide;
+        if (!slide || !slide.data || !slide.data.element) return;
+        const element = slide.data.element;
+        const type = element.getAttribute('data-type'); // 'video' for our video anchors
+
+        // Only special-case video slides; other slides let PhotoSwipe handle them.
+        if (type !== 'video') return;
+
+        e.preventDefault(); // we'll provide slide.content ourselves
+
+        const videoSrc = (element.getAttribute('data-video-src') || element.getAttribute('href') || '').trim();
+        if (!videoSrc) return;
+
+        // Utility: determine if URL looks like an mp4
+        const isMp4 = /\.mp4(?:\?|$)/i.test(videoSrc) || videoSrc.includes('mime=video/mp4');
+
+        // Container to mount media
+        const mount = document.createElement('div');
+        mount.style.width = '100%';
+        mount.style.height = '100%';
+        mount.style.display = 'flex';
+        mount.style.alignItems = 'center';
+        mount.style.justifyContent = 'center';
+        mount.style.background = '#000';
+
+        // Helper to fallback: close PSWP and open in new tab
+        function fallbackOpen() {
+            try { lightbox.pswp.close(); } catch (err) {}
+            window.open(videoSrc, '_blank', 'noopener');
+            if (typeof Toastify !== 'undefined') {
+                Toastify({ text: "⚠️ Video could not be embedded — opened in new tab.", duration: 3500 }).showToast();
+            }
+        }
+
+        // 1) If it's an MP4, try native <video>
+        if (isMp4) {
+            const video = document.createElement('video');
+            video.controls = true;
+            video.playsInline = true;
+            video.style.width = '100%';
+            video.style.height = '100%';
+            video.preload = 'metadata';
+            // Add muted autoplay option if you want autoplay
+            // video.muted = true; video.autoplay = true;
+
+            // Set src
+            video.src = videoSrc;
+
+            // If canplay event fires, use video
+            const canplayHandler = () => {
+                clearAll();
+                mount.appendChild(video);
+                slide.content = mount;
+            };
+
+            const errHandler = () => {
+                clearAll();
+                // Try iframe fallback after video load fail
+                tryIframeFallback();
+            };
+
+            function clearAll() {
+                video.removeEventListener('canplay', canplayHandler);
+                video.removeEventListener('error', errHandler);
+                clearTimeout(videoTimeout);
+            }
+
+            // Timeout in case network stalls
+            const videoTimeout = setTimeout(() => {
+                video.removeEventListener('canplay', canplayHandler);
+                video.removeEventListener('error', errHandler);
+                // fallback to iframe attempt
+                tryIframeFallback();
+            }, 3000);
+
+            video.addEventListener('canplay', canplayHandler, { once: true });
+            video.addEventListener('error', errHandler, { once: true });
+
+            // set slide.content optimistically (it will show when canplay called)
+            // but to avoid blank area, don't set slide.content yet — wait for canplay
+            return;
+        }
+
+        // 2) Otherwise try iframe embed; detect blocked iframe and fallback
+        function tryIframeFallback() {
+            const iframe = document.createElement('iframe');
+            iframe.src = videoSrc;
+            iframe.className = 'pswp-video-iframe';
+            iframe.style.width = '100%';
+            iframe.style.height = '100%';
+            iframe.setAttribute('frameborder', '0');
+            iframe.setAttribute('allowfullscreen', 'true');
+            iframe.setAttribute('allow', 'autoplay; fullscreen; picture-in-picture');
+
+            mount.appendChild(iframe);
+            slide.content = mount;
+
+            // Best-effort detection: if iframe.contentWindow is null shortly after load, treat as blocked.
+            let blockedTimer = setTimeout(() => {
+                let blocked = false;
+                try {
+                    // If contentWindow is null or distance check — heuristic
+                    if (!iframe.contentWindow) blocked = true;
+                } catch (err) {
+                    // cross-origin access — not necessarily blocked; don't mark as blocked
+                    blocked = false;
+                }
+                if (blocked) fallbackOpen();
+            }, 1300);
+
+            iframe.onload = () => {
+                clearTimeout(blockedTimer);
+                // iframe loaded — embedded successfully (may still be cross-origin but visible)
+            };
+
+            iframe.onerror = () => {
+                clearTimeout(blockedTimer);
+                fallbackOpen();
+            };
+        }
+
+        // Start iframe fallback immediately if we didn't try mp4 path
+        tryIframeFallback();
+    });
+
+
 
     // Add custom edit button (admin only)
     lightbox.on('uiRegister', function() {
@@ -81,17 +210,28 @@ function initPhotoSwipe() {
 
         const numItems = lightbox.pswp.getNumItems();
         console.log(`✅ Creating ${numItems} thumbnails`);
-        
-        // Create thumbnail for each slide
+
         for (let i = 0; i < numItems; i++) {
             const slideData = lightbox.pswp.getItemData(i);
-            if (!slideData || !slideData.src) continue;
-            
+            if (!slideData) continue;
+
             const thumb = document.createElement('img');
-            thumb.src = slideData.msrc || slideData.src;
+
+            // ✔️ FIX: choose thumbnail for ALL slide types (image OR video/HTML)
+            const msrc =
+                slideData.msrc ||                                  // image or custom thumb
+                slideData.src ||                                   // fallback for images
+                (slideData.html && (
+                    new DOMParser()
+                        .parseFromString(slideData.html, "text/html")
+                        .querySelector("img") || {}
+                ).src) ||                                          // parse thumbnail from html slide
+                "video-placeholder.png";                           // ultimate fallback
+
+            thumb.src = msrc;
             thumb.className = 'pswp__thumbnail';
             thumb.dataset.index = i;
-            
+
             if (i === lightbox.pswp.currIndex) {
                 thumb.classList.add('active');
             }
@@ -101,15 +241,20 @@ function initPhotoSwipe() {
         }
 
         pswpElement.appendChild(thumbContainer);
-        
+
         // Scroll to active thumbnail
         setTimeout(() => {
             const activeThumb = thumbContainer.querySelector('.pswp__thumbnail.active');
             if (activeThumb) {
-                activeThumb.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+                activeThumb.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'nearest',
+                    inline: 'center'
+                });
             }
         }, 100);
     });
+
 
     // Update active thumbnail when sliding
     lightbox.on('change', () => {

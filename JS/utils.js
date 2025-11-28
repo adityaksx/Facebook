@@ -55,20 +55,20 @@ function processHashtags(text) {
 }
 
 // Convert Google Drive URLs to embeddable /preview format
+// Convert Google Drive URLs to embeddable /preview format
+// Convert Google Drive URLs to embeddable /preview format
 function convertGoogleDriveUrl(url) {
     if (!url) return null;
 
-    // Only process Google Drive URLs
     if (!url.includes('drive.google.com')) return null;
 
     let fileId = null;
 
-    // Extract file ID from various Google Drive URL formats
     const patterns = [
-        /drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/,         // https://drive.google.com/file/d/ID/view?...
-        /drive\.google\.com\/open\?id=([a-zA-Z0-9_-]+)/,         // https://drive.google.com/open?id=ID
-        /drive\.google\.com\/.*[?&]id=([a-zA-Z0-9_-]+)/,         // any ...?id=ID
-        /drive\.google\.com\/uc\?export=download&id=([a-zA-Z0-9_-]+)/ // uc?export=download&id=ID
+        /drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/,
+        /drive\.google\.com\/open\?id=([a-zA-Z0-9_-]+)/,
+        /drive\.google\.com\/.*[?&]id=([a-zA-Z0-9_-]+)/,
+        /drive\.google\.com\/uc\?export=download&id=([a-zA-Z0-9_-]+)/
     ];
 
     for (const pattern of patterns) {
@@ -79,20 +79,16 @@ function convertGoogleDriveUrl(url) {
         }
     }
 
-    // If we found a file ID, always return a /preview URL
     if (fileId) {
         return `https://drive.google.com/file/d/${fileId}/preview`;
     }
 
-    // If it's already a /preview link, keep it
     if (url.includes('/preview')) {
         return url;
     }
 
-    // Not a recognized Drive file URL
     return null;
 }
-
 
 // Format date for display
 function formatDate(timestamp) {

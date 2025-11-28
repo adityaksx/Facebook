@@ -27,14 +27,9 @@ function createPostCard(post) {
         card.appendChild(createPostContent(post));
     }
 
-    // IMAGES
-    if (post.images && post.images.length > 0) {
-        card.appendChild(createImageGallery(post));
-    }
-
-    // VIDEOS
-    if (post.videos && post.videos.length > 0) {
-        card.appendChild(createVideoGallery(post));
+    // MEDIA (images + videos together)
+    if ((post.images && post.images.length > 0) || (post.videos && post.videos.length > 0)) {
+        card.appendChild(createMediaGallery(post));
     }
 
     // STATS
@@ -147,149 +142,169 @@ function createPostContent(post) {
     return contentDiv;
 }
 
+
 /**
- * Create image gallery with lazy loading
+ * Create unified media gallery (images + videos) for PhotoSwipe
+ * Supports mixed images + videos in the same gallery and layout
  */
 /**
- * Create image gallery with lazy loading
+ * Create unified media gallery (images + videos) for PhotoSwipe
+ * Fixed: ensures 'thumb' is defined and used safely for video slides
  */
-/**
- * Create image gallery with lazy loading and proper dimensions
- */
-function createImageGallery(post) {
-    const imagesDiv = document.createElement('div');
-    imagesDiv.className = 'post-images';
-    imagesDiv.setAttribute('data-pswp-gallery', `post-${post.id}`);
-    
-    const imageCount = post.images.length;
-    
-    // Layout class
+function createMediaGallery(post) {
+    const mediaDiv = document.createElement('div');
+    mediaDiv.className = 'post-images';
+    mediaDiv.setAttribute('data-pswp-gallery', `post-${post.id}`);
+
+    const images = post.images || [];
+    const videos = post.videos || [];
+
+    const mediaItems = [];
+    images.forEach(src => mediaItems.push({ type: 'image', src }));
+    videos.forEach(videoUrl => {
+        const embedUrl = (typeof Utils !== 'undefined' && Utils.convertGoogleDriveUrl)
+            ? (Utils.convertGoogleDriveUrl(videoUrl) || videoUrl)
+            : videoUrl;
+        mediaItems.push({ type: 'video', src: embedUrl, original: videoUrl });
+    });
+
+    const count = mediaItems.length;
+    if (count === 0) return mediaDiv;
+
     const layouts = ['layout-1', 'layout-2', 'layout-3', 'layout-4', 'layout-5plus'];
-    imagesDiv.classList.add(imageCount <= 4 ? layouts[imageCount - 1] : layouts[4]);
-    
-    const displayCount = Math.min(imageCount, 5);
-    
-    // ⭐ Loop through ALL images
-    for (let i = 0; i < imageCount; i++) {
-        const imgSrc = post.images[i];
-        
-        const imgContainer = document.createElement('div');
-        imgContainer.className = 'img-container';
-        
+    mediaDiv.classList.add(count <= 4 ? layouts[count - 1] : layouts[4]);
+
+    const displayCount = Math.min(count, 5);
+
+    // Path to thumbnail image for videos - put a file at this path or change it
+    const defaultVideoThumb = 'video-placeholder.png';
+
+    // tiny 1x1 svg so PhotoSwipe doesn't try to load a real broken image
+    const tinySvgDataUri = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"></svg>';
+
+    for (let i = 0; i < count; i++) {
+        const item = mediaItems[i];
+        const container = document.createElement('div');
+        container.className = 'img-container';
+
         const link = document.createElement('a');
-        link.href = imgSrc;
-        link.setAttribute('data-pswp-src', imgSrc);
-        
-        // ⭐ CRITICAL: Set default dimensions (required by PhotoSwipe)
-        link.setAttribute('data-pswp-width', '1600');
-        link.setAttribute('data-pswp-height', '1200');
-        
-        // ✅ OPTIMIZATION: Use loading="lazy" and decoding="async"
-        const img = document.createElement('img');
-        img.src = imgSrc;
-        img.alt = `Photo ${i + 1}`;
-        img.loading = 'lazy';
-        img.decoding = 'async';
-        img.classList.add('post-img');
-        
-        // ⭐ UPDATE TO ACTUAL DIMENSIONS WHEN IMAGE LOADS
-        img.onload = function() {
-            // Use the actual image dimensions
-            link.setAttribute('data-pswp-width', this.naturalWidth);
-            link.setAttribute('data-pswp-height', this.naturalHeight);
-        };
-        
-        img.onerror = function() {
-            this.style.display = 'none';
-            this.parentElement.style.display = 'none';
-        };
-        
-        link.appendChild(img);
-        imgContainer.appendChild(link);
-        
-        // Hide images beyond the 5th
-        if (i >= displayCount) {
-            imgContainer.style.display = 'none';
-        }
-        
-        // +N overlay on the 5th visible image
-        if (i === 4 && imageCount > 5) {
+        link.setAttribute('data-pswp-gallery', `post-${post.id}`);
+        link.style.cursor = 'pointer';
+
+        // Define a thumb variable up-front so it's always available
+        let thumb = tinySvgDataUri;
+
+        if (item.type === 'image') {
+            link.href = item.src;
+            link.setAttribute('data-pswp-src', item.src);
+            link.setAttribute('data-pswp-width', '1600');
+            link.setAttribute('data-pswp-height', '1200');
+
+            const img = document.createElement('img');
+            img.src = item.src;
+            img.alt = `Photo ${i + 1}`;
+            img.loading = 'lazy';
+            img.decoding = 'async';
+            img.classList.add('post-img');
+
+            img.onload = function() {
+                try {
+                    link.setAttribute('data-pswp-width', this.naturalWidth || 1600);
+                    link.setAttribute('data-pswp-height', this.naturalHeight || 1200);
+                } catch (e) {}
+            };
+
+            img.onerror = function() {
+                this.style.display = 'none';
+                this.parentElement.style.display = 'none';
+            };
+
+            link.appendChild(img);
+            link.setAttribute('data-pswp-msrc', item.src);
+            thumb = item.src; // thumbnail for image slides
+
+            } else {
+                // Video slide
+                const embedUrl = item.src || item.original || '';
+
+                // Use the real URL on the anchor so initPhotoSwipe can see it
+                // and the contentLoad handler can detect mp4 and use native <video>.
+                const safeUrl = (typeof Security !== 'undefined' && Security.sanitizeURL) ? Security.sanitizeURL(embedUrl) : embedUrl;
+
+                // Set anchor to point to the actual video URL (not '#')
+                link.href = safeUrl;
+                link.setAttribute('data-type', 'video');
+
+                // <-- IMPORTANT: provide data-video-src so the contentLoad handler can use it -->
+                link.setAttribute('data-video-src', safeUrl);
+
+                // Keep compatibility: also mark as HTML slide if your handler uses it
+                link.setAttribute('data-pswp-type', 'html');
+
+                // Provide a fallback HTML content (iframe) for non-mp4 embeds (e.g., some providers)
+                const iframeHTML = `
+                    <div class="pswp__video-wrapper" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:#000;">
+                        <iframe
+                            src="${safeUrl || ''}"
+                            width="100%"
+                            height="100%"
+                            frameborder="0"
+                            allow="autoplay; fullscreen; picture-in-picture"
+                            allowfullscreen
+                            style="border:0;display:block;width:100%;height:100%;">
+                        </iframe>
+                    </div>
+                `;
+                link.setAttribute('data-pswp-html', iframeHTML);
+
+                // determine thumbnail for video slides: prefer defaultVideoThumb if present
+                if (defaultVideoThumb) {
+                    thumb = defaultVideoThumb;
+                } else {
+                    thumb = tinySvgDataUri;
+                }
+
+                link.setAttribute('data-pswp-msrc', thumb);
+                link.setAttribute('data-pswp-src', thumb);
+                link.setAttribute('data-pswp-width', '1280');
+                link.setAttribute('data-pswp-height', '720');
+
+                const placeholder = document.createElement('div');
+                placeholder.className = 'video-placeholder';
+                placeholder.innerHTML = `
+                    <div class="play-icon">▶</div>
+                    <div class="video-text">Video</div>
+                `;
+                link.appendChild(placeholder);
+            }
+
+        // Now that thumb is defined, it's safe to use it anywhere if needed
+        // (we already set data-pswp-msrc/data-pswp-src above for video/image branches)
+
+        container.appendChild(link);
+
+        if (i >= displayCount) container.style.display = 'none';
+
+        if (i === 4 && count > 5) {
             const overlay = document.createElement('div');
             overlay.className = 'img-overlay';
-            overlay.textContent = `+${imageCount - 5}`;
+            overlay.textContent = `+${count - 5}`;
             overlay.addEventListener('click', (e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                link.click();
+                const anchor = container.querySelector('a');
+                if (anchor) anchor.click();
             });
-            imgContainer.appendChild(overlay);
+            container.appendChild(overlay);
         }
-        
-        imagesDiv.appendChild(imgContainer);
+
+        mediaDiv.appendChild(container);
     }
-    
-    return imagesDiv;
+
+    return mediaDiv;
 }
 
 
-
-/**
- * Create video gallery
- */
-function createVideoGallery(post) {
-    const videosDiv = document.createElement('div');
-    videosDiv.className = 'post-images';
-    const videoCount = post.videos.length;
-    
-    const layouts = ['layout-1', 'layout-2', 'layout-3', 'layout-4', 'layout-5plus'];
-    videosDiv.classList.add(videoCount <= 4 ? layouts[videoCount - 1] : layouts[4]);
-    
-    const displayCount = Math.min(videoCount, 5);
-    
-    for (let i = 0; i < displayCount; i++) {
-        const videoUrl = post.videos[i];
-        const videoContainer = document.createElement('div');
-        videoContainer.className = 'img-container';
-        
-        const embedUrl = Utils.convertGoogleDriveUrl(videoUrl);
-        
-        if (embedUrl) {
-            const iframe = document.createElement('iframe');
-            iframe.src = embedUrl;
-            iframe.classList.add('post-video-iframe');
-            iframe.setAttribute('frameborder', '0');
-            iframe.setAttribute('allowfullscreen', 'true');
-            iframe.setAttribute('loading', 'lazy');
-            iframe.alt = `Video ${i + 1}`;
-            videoContainer.appendChild(iframe);
-        } else {
-            const videoLink = document.createElement('a');
-            videoLink.href = videoUrl;
-            videoLink.target = '_blank';
-            videoLink.rel = 'noopener noreferrer';
-            videoLink.className = 'video-fallback-link';
-            videoLink.innerHTML = `
-                <div class="video-placeholder">
-                    <div class="play-icon">▶</div>
-                    <div class="video-text">Click to watch video</div>
-                </div>
-            `;
-            videoContainer.appendChild(videoLink);
-        }
-        
-        if (i === 4 && videoCount > 5) {
-            const overlay = document.createElement('div');
-            overlay.className = 'img-overlay';
-            overlay.textContent = `+${videoCount - 5}`;
-            overlay.onclick = () => window.open(videoUrl, '_blank');
-            videoContainer.appendChild(overlay);
-        }
-        
-        videosDiv.appendChild(videoContainer);
-    }
-    
-    return videosDiv;
-}
 
 /**
  * Create post stats (like/comment counts)

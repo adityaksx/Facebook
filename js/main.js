@@ -2,6 +2,20 @@
 // MAIN INITIALIZATION - App Entry Point
 // ============================================
 
+// Decide if this is single-post (shared) view
+const urlParams = new URLSearchParams(window.location.search);
+const isSinglePost = urlParams.has('post');
+
+// Only initialize AOS for full feed (no ?post=...)
+if (!isSinglePost && typeof AOS !== 'undefined') {
+  AOS.init({
+    duration: 500,
+    once: true,
+    offset: 50
+  });
+}
+
+
 /**
  * Main initialization function
  * Called when DOM is ready
@@ -183,6 +197,27 @@ function setupAdminLogin() {
     console.log('✅ Admin login setup complete');
 }
 
+// Scroll to specific post if ?post=xxx is in URL
+function scrollToPostFromURL() {
+  const urlParams = new URLSearchParams(window.location.search);
+  const postId = urlParams.get('post');
+
+  if (!postId) return;
+
+  // Wait a bit for posts to render
+  setTimeout(() => {
+    const postCard = document.querySelector(`.post-card[data-post-id="${postId}"]`);
+    if (postCard) {
+      postCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      // Optional highlight
+      postCard.style.backgroundColor = '#e7f3ff';
+      setTimeout(() => {
+        postCard.style.backgroundColor = '';
+      }, 2000);
+    }
+  }, 1000);
+}
+
 // Start the app when DOM is ready
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initializeApp);
@@ -190,5 +225,12 @@ if (document.readyState === 'loading') {
     // DOM already loaded
     initializeApp();
 }
+
+// Call it after initialization
+document.addEventListener('DOMContentLoaded', () => {
+    initializeApp().then(() => {
+        scrollToPostFromURL();
+    });
+});
 
 console.log('✅ Main script loaded');

@@ -358,9 +358,21 @@ function createPostActions(post) {
       actions.closest(".post-card").querySelector(".likes")
     );
   commentBtn.onclick = () => toggleCommentsSection(post.id);
+
   shareBtn.onclick = () => {
-    Utils.copyToClipboard(window.location.href);
+      // Create shareable URL with post ID as URL parameter
+      const shareUrl = `${window.location.origin}${window.location.pathname}?post=${post.id}`;
+      Utils.copyToClipboard(shareUrl);
+      
+      Toastify({
+          text: "📋 Post link copied to clipboard!",
+          duration: 2500,
+          gravity: "bottom",
+          position: "center",
+          style: { background: "#1877f2" }
+      }).showToast();
   };
+
 
   requestIdleCallback(() => {
     PostActions.checkUserLiked(post.id, likeBtn);
@@ -439,23 +451,76 @@ function toggleCommentsSection(postId) {
  * Render posts to container with performance optimization
  */
 function renderPosts() {
-  const container = document.getElementById("postsContainer");
+  const container = document.getElementById('postsContainer');
+  if (!container) {
+    console.error('❌ Posts container not found');
+    return;
+  }
+
+  const params = new URLSearchParams(window.location.search);
+  const singlePostId = params.get('post');
+
+  container.innerHTML = '';
+
+  if (singlePostId) {
+    container.innerHTML = '';
+
+    const post = filteredPosts.find(p => String(p.id) === String(singlePostId));
+
+    if (!post) {
+      container.innerHTML = '<div class="no-posts"><p>Post not found</p></div>';
+    } else {
+      const card = createPostCard(post);
+      container.appendChild(card);
+
+      const backCard = document.createElement('div');
+      backCard.className = 'post-card back-to-home-card';
+      backCard.innerHTML = `
+        <div class="post-content" style="text-align:center; padding:16px;">
+          <p style="margin-bottom:12px;">You are viewing a single post.</p>
+          <button id="backToHomeBtn"
+            style="
+              padding:8px 16px;
+              border-radius:4px;
+              border:none;
+              background:#1877f2;
+              color:#fff;
+              cursor:pointer;
+            ">
+            ← Back to all posts
+          </button>
+        </div>
+      `;
+      container.appendChild(backCard);
+
+      const backBtn = backCard.querySelector('#backToHomeBtn');
+      backBtn.onclick = () => {
+        window.location.href = window.location.pathname; // go to full feed
+      };
+    }
+
+    if (typeof initPhotoSwipe === 'function') {
+      initPhotoSwipe();
+    }
+
+    currentPage = 1;
+    return;
+  }
+
+
+
+  // NORMAL MULTI-POST MODE (keep AOS + scroll behavior)
   const start = currentPage * POSTS_PER_PAGE;
   const end = start + POSTS_PER_PAGE;
   const postsToRender = filteredPosts.slice(start, end);
 
-  if (!container) {
-    console.error("❌ Posts container not found");
-    return;
-  }
-
-  if (!postsToRender.length && currentPage === 0) {
+  if (postsToRender.length === 0 && currentPage === 0) {
     container.innerHTML = '<div class="no-posts"><p>No posts to display</p></div>';
     return;
   }
 
   const fragment = document.createDocumentFragment();
-  postsToRender.forEach((post) => {
+  postsToRender.forEach(post => {
     const postCard = createPostCard(post);
     fragment.appendChild(postCard);
   });
@@ -463,20 +528,17 @@ function renderPosts() {
   container.appendChild(fragment);
 
   requestAnimationFrame(() => {
-    if (typeof AOS !== "undefined") {
-      AOS.refresh();
-      console.log("✅ AOS refreshed");
+    if (typeof AOS !== 'undefined') {
+      AOS.refresh();  // animations only in full feed
     }
-
-    if (typeof initPhotoSwipe === "function") {
+    if (typeof initPhotoSwipe === 'function') {
       initPhotoSwipe();
-      console.log("✅ PhotoSwipe reinitialized for new posts");
     }
   });
 
   currentPage++;
-  console.log(`✅ Rendered ${postsToRender.length} posts (page ${currentPage})`);
 }
+
 
 console.log("✅ Post renderer loaded");
 

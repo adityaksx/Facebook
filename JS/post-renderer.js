@@ -107,6 +107,37 @@ function createPostContent(post) {
     textDiv.className = 'post-text';
     textDiv.innerHTML = Utils.processHashtags(Security.sanitizeHTML(cleanedContent));
     contentDiv.appendChild(textDiv);
+
+    // Add "Read more" button if text is long
+    // Create a temporary element to measure text length
+    const tempDiv = document.createElement('div');
+    tempDiv.className = 'post-text';
+    tempDiv.style.position = 'absolute';
+    tempDiv.style.visibility = 'hidden';
+    tempDiv.style.pointerEvents = 'none';
+    tempDiv.style.width = textDiv.clientWidth + 'px';
+    tempDiv.innerHTML = textDiv.innerHTML;
+    document.body.appendChild(tempDiv);
+
+    // If height exceeds approx. 7 lines, show button
+    const lineHeight = parseFloat(getComputedStyle(textDiv).lineHeight) || 20;
+    const maxVisibleHeight = lineHeight * 7;
+
+    if (tempDiv.scrollHeight > maxVisibleHeight + 5) {
+        const btn = document.createElement('button');
+        btn.className = 'read-more-btn';
+        btn.textContent = 'Read more';
+
+        btn.addEventListener('click', () => {
+            const expanded = textDiv.classList.toggle('expanded');
+            btn.textContent = expanded ? 'Show less' : 'Read more';
+        });
+
+        contentDiv.appendChild(btn);
+    }
+
+    // Remove temp element
+    document.body.removeChild(tempDiv);
     
     // Add translation feature if needed
     if (Translation.containsHindi(cleanedContent)) {
@@ -346,7 +377,7 @@ function createCommentsSection(post) {
     
     commentsSection.innerHTML = `
         <div class="comment-input-container">
-            <input type="text" class="comment-input" placeholder="Write a comment..." />
+            <input type="text" name="comment" class="comment-input" placeholder="Write a comment..." />
             <button class="comment-submit-btn">Post</button>
         </div>
         <div class="comments-list"></div>
@@ -420,7 +451,7 @@ function renderPosts() {
             AOS.refresh();
             console.log('✅ AOS refreshed');
         }
-        
+
         if (typeof initPhotoSwipe === 'function') {
             initPhotoSwipe();
             console.log('✅ PhotoSwipe reinitialized for new posts');

@@ -75,7 +75,7 @@
                 <span class="logo">facebook</span>
             </div>
             <div class="nav-center">
-                <input type="text" id="searchInput" class="search-bar" placeholder="Search Facebook" />
+                <input type="text" id="searchInput" name="searchInput" class="search-bar" placeholder="Search Facebook" />
                 <div id="searchResults" class="search-results"></div>
             </div>
             <div class="nav-right">
@@ -215,7 +215,7 @@
             <span class="admin-close">&times;</span>
             <h2>Admin Login</h2>
             <input type="email" id="adminEmail" placeholder="Email" class="admin-input" />
-            <input type="password" id="adminPassword" placeholder="Password" class="admin-input" />
+            <input type="password" id="adminPassword" name="adminPassword" placeholder="Password" class="admin-input" autocomplete="current-password" />
             <button id="adminLoginSubmit" class="admin-submit-btn">Login</button>
             <div id="adminLoginError" style="color: red; margin-top: 10px;"></div>
         </div>

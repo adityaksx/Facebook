@@ -12,7 +12,6 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="dns-prefetch" href="https://fonts.googleapis.com">
     <link rel="preload" as="image" href="profile.jpg">
-    <link rel="preload" as="script" href="facebook_complete.js">
     <title>Satyapal Singh - Facebook</title>
 
     <!-- 👇 ADD CRITICAL CSS (BEFORE main stylesheet) -->
@@ -51,8 +50,22 @@
     <!-- PhotoSwipe - Image Gallery -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/photoswipe@5.4.3/dist/photoswipe.css">
 
+    <!-- ✅ TUI Image Editor (ADD THESE) -->
+    <link rel="stylesheet" href="https://uicdn.toast.com/tui-image-editor/latest/tui-image-editor.css">
+    <link rel="stylesheet" href="https://uicdn.toast.com/tui-color-picker/latest/tui-color-picker.css">
+
     <!-- Your main stylesheet -->
     <link rel="stylesheet" href="facebook_complete.css">
+
+    <!-- ⭐ ADD PERFORMANCE OPTIMIZATIONS HERE ⭐ -->
+    <!-- Preconnect to external resources -->
+    <link rel="preconnect" href="https://juznwjbznnlccdhhcpso.supabase.co">
+    <link rel="dns-prefetch" href="https://juznwjbznnlccdhhcpso.supabase.co">
+    <link rel="preconnect" href="https://cdn.jsdelivr.net">
+    
+    <!-- Preload critical images -->
+    <link rel="preload" as="image" href="profile.jpg">
+
 </head>
 <body style="overscroll-behavior-y: contain;">
     <!-- Navigation Bar -->
@@ -208,15 +221,22 @@
         </div>
     </div>
 
+    <!-- Tui Image Editor Modal -->
+    <div id="tuiEditorModal" class="tui-editor-modal" style="display: none;">
+        <div class="tui-editor-header">
+            <button id="tuiEditorClose" class="tui-editor-close-btn">✕ Close</button>
+            <button id="tuiEditorSave" class="tui-editor-save-btn">💾 Save</button>
+        </div>
+        <div id="tuiImageEditorContainer"></div>
+    </div>
+
+
     <!-- Supabase -->
     <script src="https://unpkg.com/@supabase/supabase-js@2.47.0/dist/umd/supabase.js"></script>
     <script>
         window.SUPABASE_URL = 'https://juznwjbznnlccdhhcpso.supabase.co';
         window.SUPABASE_ANON_KEY = 'sb_publishable_RSXulp5PrlLVmcWnfPrl9A_T_-e_arT';
     </script>
-
-    <!-- Fuse.js for search -->
-    <script src="https://cdn.jsdelivr.net/npm/fuse.js/dist/fuse.min.js"></script>
 
     <!-- AOS Script -->
     <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
@@ -230,9 +250,44 @@
     <!-- Tippy.js with Popper (keep existing) -->
     <script src="https://unpkg.com/@popperjs/core@2"></script>
     <script src="https://unpkg.com/tippy.js@6"></script>
+
+    <!-- PhotoSwipe - Using unpkg CDN (more reliable) -->
+    <script src="https://unpkg.com/photoswipe@5.4.3/dist/umd/photoswipe.umd.min.js"></script>
+    <script src="https://unpkg.com/photoswipe@5.4.3/dist/umd/photoswipe-lightbox.umd.min.js"></script>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.0/fabric.min.js"></script>
+    <script src="https://uicdn.toast.com/tui-code-snippet/latest/tui-code-snippet.min.js"></script>
+    <script src="https://uicdn.toast.com/tui-color-picker/latest/tui-color-picker.min.js"></script>
+    <script src="https://uicdn.toast.com/tui-image-editor/latest/tui-image-editor.min.js"></script>
+
+    <!-- ============================================ -->
+    <!-- YOUR MODULAR SCRIPTS (Load in Order) -->
+    <!-- ============================================ -->
     
-    <!-- Your main script -->
-    <script src="facebook_complete.js"></script>
+    <!-- 1. Configuration (must load first) -->
+    <script src="js/config.js"></script>
+    
+    <!-- 2. Core utilities -->
+    <script src="js/security.js"></script>
+    <script src="js/utils.js"></script>
+    
+    <!-- 3. Supabase client -->
+    <script src="js/supabaseClient.js"></script>
+    
+    <!-- 4. Data & Actions -->
+    <script src="js/data-loader.js"></script>
+    <script src="js/post-actions.js"></script>
+    <script src="js/admin-actions.js"></script>
+    
+    <!-- 5. Rendering & UI -->
+    <script src="js/post-renderer.js"></script>
+    <script src="js/image-gallery.js"></script>
+    <script src="js/translation.js"></script>
+    <script src="js/search.js"></script>
+    <script src="js/ui-handlers.js"></script>
+    
+    <!-- 6. Main initialization (must load last) -->
+    <script src="js/main.js"></script>
     
     <!-- ✨ NEW: Initialize Enhancement Libraries -->
     <script>

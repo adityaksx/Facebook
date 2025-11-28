@@ -55,22 +55,23 @@ function processHashtags(text) {
 }
 
 // Convert Google Drive URLs to embeddable /preview format
-// Convert Google Drive URLs to embeddable /preview format
-// Convert Google Drive URLs to embeddable /preview format
+// Convert Google Drive URLs to embeddable preview format
 function convertGoogleDriveUrl(url) {
     if (!url) return null;
-
-    if (!url.includes('drive.google.com')) return null;
-
+    
+    // If it's not a Google Drive URL, return the original URL
+    if (!url.includes('drive.google.com')) {
+        return url; // Changed from 'return null' to 'return url'
+    }
+    
     let fileId = null;
-
     const patterns = [
-        /drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/,
-        /drive\.google\.com\/open\?id=([a-zA-Z0-9_-]+)/,
-        /drive\.google\.com\/.*[?&]id=([a-zA-Z0-9_-]+)/,
-        /drive\.google\.com\/uc\?export=download&id=([a-zA-Z0-9_-]+)/
+        /drive\.google\.com\/file\/d\/([a-zA-Z0-9-_]+)/,
+        /drive\.google\.com\/open\?id=([a-zA-Z0-9-_]+)/,
+        /drive\.google\.com\/.*[?&]id=([a-zA-Z0-9-_]+)/,
+        /drive\.google\.com\/uc\?export=download&id=([a-zA-Z0-9-_]+)/
     ];
-
+    
     for (const pattern of patterns) {
         const match = url.match(pattern);
         if (match && match[1]) {
@@ -78,17 +79,18 @@ function convertGoogleDriveUrl(url) {
             break;
         }
     }
-
+    
     if (fileId) {
         return `https://drive.google.com/file/d/${fileId}/preview`;
     }
-
-    if (url.includes('/preview')) {
+    
+    if (url.includes('preview')) {
         return url;
     }
-
-    return null;
+    
+    return url; // Return original URL instead of null
 }
+
 
 // Format date for display
 function formatDate(timestamp) {

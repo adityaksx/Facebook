@@ -10,6 +10,7 @@
 
 let currentLightbox = null;
 window.photoSwipeInstance = null;
+let currentPswp = null;
 let tuiImageEditor = null;
 let currentEditingPostId = null;
 let currentEditingImageIndex = 0;
@@ -42,19 +43,23 @@ function initPhotoSwipe() {
     loop: true
   });
 
-  lightbox.on('open', () => {
+  lightbox.on('afterInit', () => {
+    // Save pswp instance for later
     currentLightbox = lightbox;
-    window.photoSwipeInstance = lightbox;
-    history.pushState({ photoswipeOpen: true }, '');
+
+    // When viewer opens, push a fake state
+    if (!history.state || !history.state.photoswipeOpen) {
+      history.pushState({ photoswipeOpen: true }, '');
+    }
   });
 
   lightbox.on('close', () => {
-    currentLightbox = null;
-    window.photoSwipeInstance = null;
+    // When viewer closes via UI, go back once to clean the fake state
     if (history.state && history.state.photoswipeOpen) {
-      history.back(); // remove fake state
+      history.back();
     }
   });
+
 
   /* ------------------------------
    *  Custom content loader (video)
@@ -433,3 +438,15 @@ window.ImageGallery = {
   openTuiEditor,
   setupTuiEditorHandlers
 };
+
+window.addEventListener('popstate', () => {
+  // If PhotoSwipe is open, close it instead of leaving the page
+  if (currentLightbox && currentLightbox.pswp && !currentLightbox.pswp.isDestroying) {
+    currentLightbox.pswp.close();
+
+    // Restore fake state so the next back really navigates away
+    if (!history.state || !history.state.photoswipeOpen) {
+      history.pushState({ photoswipeOpen: true }, '');
+    }
+  }
+});

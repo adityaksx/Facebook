@@ -219,12 +219,12 @@ function scrollToPostFromURL() {
 }
 
 // Start the app when DOM is ready
-if (document.readyState === 'loading') {
+/** if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initializeApp);
 } else {
     // DOM already loaded
     initializeApp();
-}
+} */
 
 // Call it after initialization
 document.addEventListener('DOMContentLoaded', () => {

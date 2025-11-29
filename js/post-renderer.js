@@ -451,6 +451,7 @@ function toggleCommentsSection(postId) {
  * Render posts to container with performance optimization
  */
 function renderPosts() {
+
   const container = document.getElementById('postsContainer');
   if (!container) {
     console.error('❌ Posts container not found');
@@ -498,6 +499,13 @@ function renderPosts() {
         window.location.href = window.location.pathname; // go to full feed
       };
     }
+    
+    // Disable AOS animations in single-post mode
+    const aosElems = container.querySelectorAll('[data-aos]');
+    aosElems.forEach(el => {
+      el.removeAttribute('data-aos');
+      el.removeAttribute('data-aos-duration');
+    });
 
     if (typeof initPhotoSwipe === 'function') {
       initPhotoSwipe();
@@ -509,18 +517,21 @@ function renderPosts() {
 
 
 
-  // NORMAL MULTI-POST MODE (keep AOS + scroll behavior)
-  const start = currentPage * POSTS_PER_PAGE;
-  const end = start + POSTS_PER_PAGE;
-  const postsToRender = filteredPosts.slice(start, end);
-
-  if (postsToRender.length === 0 && currentPage === 0) {
+  // NORMAL MULTI-POST MODE: render ALL filteredPosts at once
+  if (!filteredPosts || filteredPosts.length === 0) {
     container.innerHTML = '<div class="no-posts"><p>No posts to display</p></div>';
     return;
   }
 
+  // Ensure stable newest → oldest order
+  filteredPosts.sort((a, b) => {
+    const ta = new Date(a.timestamp || 0).getTime();
+    const tb = new Date(b.timestamp || 0).getTime();
+    return tb - ta;
+  });
+
   const fragment = document.createDocumentFragment();
-  postsToRender.forEach(post => {
+  filteredPosts.forEach(post => {
     const postCard = createPostCard(post);
     fragment.appendChild(postCard);
   });
@@ -529,14 +540,12 @@ function renderPosts() {
 
   requestAnimationFrame(() => {
     if (typeof AOS !== 'undefined') {
-      AOS.refresh();  // animations only in full feed
-    }
-    if (typeof initPhotoSwipe === 'function') {
-      initPhotoSwipe();
+      AOS.refresh();
     }
   });
 
-  currentPage++;
+  // No pagination anymore
+  currentPage = 1;
 }
 
 

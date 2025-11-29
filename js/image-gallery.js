@@ -44,21 +44,20 @@ function initPhotoSwipe() {
   });
 
   lightbox.on('afterInit', () => {
-    // Save pswp instance for later
     currentLightbox = lightbox;
 
-    // When viewer opens, push a fake state
-    if (!history.state || !history.state.photoswipeOpen) {
-      history.pushState({ photoswipeOpen: true }, '');
-    }
+    // Push a fake state every time the viewer opens
+    history.pushState({ photoswipeOpen: true }, '');
   });
 
   lightbox.on('close', () => {
-    // When viewer closes via UI, go back once to clean the fake state
+    // When viewer closes via UI (X button / swipe down),
+    // only clean our fake state if we’re on it.
     if (history.state && history.state.photoswipeOpen) {
       history.back();
     }
   });
+
 
 
   /* ------------------------------
@@ -440,13 +439,15 @@ window.ImageGallery = {
 };
 
 window.addEventListener('popstate', () => {
-  // If PhotoSwipe is open, close it instead of leaving the page
-  if (currentLightbox && currentLightbox.pswp && !currentLightbox.pswp.isDestroying) {
+  if (
+    currentLightbox &&
+    currentLightbox.pswp &&
+    !currentLightbox.pswp.isDestroying &&
+    !currentLightbox.pswp.isClosed
+  ) {
+    // First back: close viewer only
     currentLightbox.pswp.close();
-
-    // Restore fake state so the next back really navigates away
-    if (!history.state || !history.state.photoswipeOpen) {
-      history.pushState({ photoswipeOpen: true }, '');
-    }
+    // Do NOT pushState here – let the stack move back naturally.
   }
 });
+

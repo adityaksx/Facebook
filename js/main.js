@@ -73,6 +73,14 @@ async function initializeApp() {
         
     } catch (error) {
         console.error('❌ Initialization error:', error);
+
+        // ✅ ADD THIS: Track errors
+        if (window.posthog) {
+            posthog.capture('error_init', {
+            message: error.message,
+            name: error.name
+            });
+        }
         
         // Show user-friendly error
         const container = document.getElementById('postsContainer');

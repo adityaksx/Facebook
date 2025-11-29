@@ -301,6 +301,24 @@ function createMediaGallery(post) {
     wrapper.appendChild(videosDiv);
   }
 
+  // Track image views when images enter viewport
+  if (window.posthog && 'IntersectionObserver' in window) {
+    const imgObserver = new IntersectionObserver((entries, obs) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          const postCard = entry.target.closest('.post-card');
+          const postId = postCard && postCard.getAttribute('data-post-id');
+          if (postId) {
+            posthog.capture('view_image', { post_id: postId });
+          }
+          obs.unobserve(entry.target); // only first view per image
+        }
+      });
+    }, { threshold: 0.6 });
+
+    wrapper.querySelectorAll('img.post-img').forEach(img => imgObserver.observe(img));
+  }
+
   return wrapper;
 }
 
@@ -351,12 +369,19 @@ function createPostActions(post) {
   const commentBtn = actions.querySelector(".comment-btn");
   const shareBtn = actions.querySelector(".share-btn");
 
-  likeBtn.onclick = () =>
+  likeBtn.onclick = () => {
     PostActions.handleLike(
       post.id,
       likeBtn,
       actions.closest(".post-card").querySelector(".likes")
     );
+
+    // PostHog: track like
+    if (window.posthog) {
+      posthog.capture('like_post', { post_id: post.id });
+    }
+  };
+
   commentBtn.onclick = () => toggleCommentsSection(post.id);
 
   shareBtn.onclick = () => {
@@ -364,6 +389,13 @@ function createPostActions(post) {
       const shareUrl = `${window.location.origin}${window.location.pathname}?post=${post.id}`;
       Utils.copyToClipboard(shareUrl);
       
+      // ✅ ADD THIS: Track share action
+      if (window.posthog) {
+        posthog.capture('share_post', {
+          post_id: post.id,
+          via: 'copy_link'
+        });
+      }
       Toastify({
           text: "📋 Post link copied to clipboard!",
           duration: 2500,
@@ -538,6 +570,8 @@ function renderPosts() {
 
   container.appendChild(fragment);
 
+  setupPostViewObserver();
+
   requestAnimationFrame(() => {
     if (typeof AOS !== 'undefined') {
       AOS.refresh();
@@ -548,6 +582,35 @@ function renderPosts() {
   currentPage = 1;
 }
 
+// Track post views when they enter the viewport
+let postViewObserver;
+
+function setupPostViewObserver() {
+  if (!('IntersectionObserver' in window) || !window.posthog) return;
+
+  if (postViewObserver) postViewObserver.disconnect();
+
+  postViewObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        const card = entry.target;
+        const postId = card.getAttribute('data-post-id');
+        if (!postId) return;
+
+        posthog.capture('view_post', { post_id: postId });
+
+        // Optional: only count first view per card
+        postViewObserver.unobserve(card);
+      }
+    });
+  }, {
+    threshold: 0.5 // at least 50% of card visible
+  });
+
+  document.querySelectorAll('.post-card[data-post-id]').forEach(card => {
+    postViewObserver.observe(card);
+  });
+}
 
 console.log("✅ Post renderer loaded");
 
@@ -556,3 +619,4 @@ window.PostRenderer = {
   renderPosts,
   toggleCommentsSection
 };
+

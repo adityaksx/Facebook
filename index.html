@@ -230,6 +230,57 @@
         <div id="tuiImageEditorContainer"></div>
     </div>
 
+    <script>
+    !function(t,e){
+        var o,n,p,r;
+        if (!e.__SV) {
+        window.posthog = e;
+        e._i = [];
+        e.init = function(i,s,a){
+            function g(t,e){
+            var o = e.split(".");
+            if (o.length == 2) {
+                t = t[o[0]];
+                e = o[1];
+            }
+            t[e] = function(){
+                t.push([e].concat(Array.prototype.slice.call(arguments,0)));
+            };
+            }
+            o = t.createElement("script");
+            o.type = "text/javascript";
+            o.async = true;
+            o.src = "https://us.posthog.com/static/array.js";
+            n = t.getElementsByTagName("script")[0];
+            n.parentNode.insertBefore(o, n);
+
+            var u = e;
+            if (a !== undefined) {
+            u = e[a] = [];
+            } else {
+            a = "posthog";
+            }
+            u.people = u.people || [];
+            u.toString = function(t){
+            var str = "posthog";
+            if (a !== "posthog") str += "." + a;
+            if (!t) str += " (stub)";
+            return str;
+            };
+            u.people.toString = function(){
+            return u.toString(1) + ".people (stub)";
+            };
+            p = "capture identify alias people.set people.set_once reset".split(" ");
+            for (r = 0; r < p.length; r++) g(u, p[r]);
+            e._i.push([i, s, a]);
+        };
+        }
+    }(document, window.posthog || {});
+
+    posthog.init('phc_GgaMmRzQPzGJ1LUtj6Y6Go7OCXn7Jp5qusfgV0uVw7h', {
+        api_host: 'https://us.posthog.com'
+    });
+    </script>
 
     <!-- Supabase -->
     <script src="https://unpkg.com/@supabase/supabase-js@2.47.0/dist/umd/supabase.js"></script>

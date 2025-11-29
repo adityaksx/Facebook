@@ -9,6 +9,7 @@
  */
 
 let currentLightbox = null;
+window.photoSwipeInstance = null;
 let tuiImageEditor = null;
 let currentEditingPostId = null;
 let currentEditingImageIndex = 0;
@@ -39,6 +40,20 @@ function initPhotoSwipe() {
     padding: { top: 50, bottom: 130, left: 20, right: 20 },
     bgOpacity: 0.95,
     loop: true
+  });
+
+  lightbox.on('open', () => {
+    currentLightbox = lightbox;
+    window.photoSwipeInstance = lightbox;
+    history.pushState({ photoswipeOpen: true }, '');
+  });
+
+  lightbox.on('close', () => {
+    currentLightbox = null;
+    window.photoSwipeInstance = null;
+    if (history.state && history.state.photoswipeOpen) {
+      history.back(); // remove fake state
+    }
   });
 
   /* ------------------------------

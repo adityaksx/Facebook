@@ -242,3 +242,16 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 console.log('✅ Main script loaded');
+
+// Handle Android back button while PhotoSwipe is open
+window.addEventListener('popstate', (event) => {
+  if (window.photoSwipeInstance) {
+    // Close viewer instead of leaving page
+    window.photoSwipeInstance.pswp.close();
+
+    // Ensure we stay on the same page by restoring fake state
+    if (!history.state || !history.state.photoswipeOpen) {
+      history.pushState({ photoswipeOpen: true }, '');
+    }
+  }
+});

@@ -475,29 +475,40 @@ img {
     box-shadow: 0 2px 8px rgba(0,0,0,0.12);
 }
 
-.post-card .post-content,
+/* ✅ Only limit images, not text content */
+.post-card .post-content {
+    max-width: 600px;
+    /* NO max-height here */
+}
+
 .post-card .post-images {
     max-width: 600px;
-    max-height: 400px;   /* keep space for buttons/etc */
+    max-height: 400px;   /* limit image gallery height */
     overflow: hidden;
     position: relative;
 }
 
+
 /* Clamp post text by default */
 .post-text {
+    max-height: 7em; /* ~7 lines */
     display: -webkit-box;
-    line-clamp: 7;               /* standard property for compatibility */
-    -webkit-line-clamp: 7;      /* visible lines */
+    line-clamp: 7;
+    -webkit-line-clamp: 7;
     -webkit-box-orient: vertical;
     overflow: hidden;
     position: relative;
+    transition: max-height 0.3s ease;
 }
 
 /* When expanded, show full text */
 .post-text.expanded {
-    -webkit-line-clamp: unset;
-    line-clamp: unset;
-    max-height: none;
+    display: block !important;  /* ✅ Remove -webkit-box display */
+    -webkit-line-clamp: unset !important;
+    line-clamp: unset !important;
+    -webkit-box-orient: unset !important;
+    max-height: none !important;
+    overflow: visible !important;
 }
 
 /* Read more button */
@@ -511,6 +522,11 @@ img {
     border: none;
     padding: 0;
 }
+
+.read-more-btn:hover {
+  text-decoration: underline;
+}
+
 
 .post-header {
     display: flex;

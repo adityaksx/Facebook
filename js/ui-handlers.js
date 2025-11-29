@@ -118,9 +118,13 @@ function setupYearFilter() {
             });
         }
         
-        currentPage = 0;
+        window.currentPage = 0;
         document.getElementById('postsContainer').innerHTML = '';
-        PostRenderer.renderPosts();
+        if (window.PostRenderer && typeof window.PostRenderer.renderPosts === 'function') {
+        window.PostRenderer.renderPosts();
+        } else {
+        console.warn('PostRenderer not ready yet for yearFilter');
+        }
         
         console.log(`✅ Filtered by year: ${selectedYear} (${filteredPosts.length} posts)`);
     });
@@ -134,9 +138,13 @@ function setupYearFilter() {
 function setupScrollLoading() {
     const debouncedScroll = Utils.debounce(() => {
         if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 500) {
-            if (currentPage * POSTS_PER_PAGE < filteredPosts.length) {
-                PostRenderer.renderPosts();
-            }
+            if (window.PostRenderer && typeof window.PostRenderer.renderPosts === 'function') {
+                if (currentPage * POSTS_PER_PAGE < filteredPosts.length) {
+                    window.PostRenderer.renderPosts();
+                }
+                } else {
+                console.warn('PostRenderer not ready yet for scroll load');
+                }
         }
     }, 150);
     

@@ -335,14 +335,6 @@ function createPostStats(post) {
     <div class="comments-shares"><span class="comment-count">0</span> Comments</div>
   `;
 
-  requestIdleCallback(() => {
-    DataLoader.loadPostStats(
-      post.id,
-      stats.querySelector(".likes"),
-      stats.querySelector(".comments-shares")
-    );
-  });
-
   return stats;
 }
 
@@ -482,8 +474,10 @@ function toggleCommentsSection(postId) {
 /**
  * Render posts to container with performance optimization
  */
+/**
+ * Render posts to container with performance optimization
+ */
 function renderPosts() {
-
   const container = document.getElementById('postsContainer');
   if (!container) {
     console.error('❌ Posts container not found');
@@ -493,45 +487,48 @@ function renderPosts() {
   const params = new URLSearchParams(window.location.search);
   const singlePostId = params.get('post');
 
-  container.innerHTML = '';
-
+  // ========================================
+  // SINGLE-POST MODE (view one specific post)
+  // ========================================
   if (singlePostId) {
-    container.innerHTML = '';
+    container.innerHTML = '';  // clear for single post view
 
     const post = filteredPosts.find(p => String(p.id) === String(singlePostId));
 
     if (!post) {
       container.innerHTML = '<div class="no-posts"><p>Post not found</p></div>';
-    } else {
-      const card = createPostCard(post);
-      container.appendChild(card);
-
-      const backCard = document.createElement('div');
-      backCard.className = 'post-card back-to-home-card';
-      backCard.innerHTML = `
-        <div class="post-content" style="text-align:center; padding:16px;">
-          <p style="margin-bottom:12px;">You are viewing a single post.</p>
-          <button id="backToHomeBtn"
-            style="
-              padding:8px 16px;
-              border-radius:4px;
-              border:none;
-              background:#1877f2;
-              color:#fff;
-              cursor:pointer;
-            ">
-            ← Back to all posts
-          </button>
-        </div>
-      `;
-      container.appendChild(backCard);
-
-      const backBtn = backCard.querySelector('#backToHomeBtn');
-      backBtn.onclick = () => {
-        window.location.href = window.location.pathname; // go to full feed
-      };
+      return;
     }
-    
+
+    const card = createPostCard(post);
+    container.appendChild(card);
+
+    // Add "back to all posts" button
+    const backCard = document.createElement('div');
+    backCard.className = 'post-card back-to-home-card';
+    backCard.innerHTML = `
+      <div class="post-content" style="text-align:center; padding:16px;">
+        <p style="margin-bottom:12px;">You are viewing a single post.</p>
+        <button id="backToHomeBtn"
+          style="
+            padding:8px 16px;
+            border-radius:4px;
+            border:none;
+            background:#1877f2;
+            color:#fff;
+            cursor:pointer;
+          ">
+          ← Back to all posts
+        </button>
+      </div>
+    `;
+    container.appendChild(backCard);
+
+    const backBtn = backCard.querySelector('#backToHomeBtn');
+    backBtn.onclick = () => {
+      window.location.href = window.location.pathname;
+    };
+
     // Disable AOS animations in single-post mode
     const aosElems = container.querySelectorAll('[data-aos]');
     aosElems.forEach(el => {
@@ -543,73 +540,120 @@ function renderPosts() {
       initPhotoSwipe();
     }
 
-    currentPage = 1;
+    window.currentPage = 1;
     return;
   }
 
+  // ========================================
+  // FEED MODE (paginated, infinite scroll)
+  // ========================================
 
-
-  // NORMAL MULTI-POST MODE: render ALL filteredPosts at once
+  // Check if posts exist
   if (!filteredPosts || filteredPosts.length === 0) {
-    container.innerHTML = '<div class="no-posts"><p>No posts to display</p></div>';
+    if (window.currentPage === 0) {
+      container.innerHTML = '<div class="no-posts"><p>No posts to display</p></div>';
+    }
     return;
   }
 
-  // Ensure stable newest → oldest order
+  // Sort newest → oldest (stable)
   filteredPosts.sort((a, b) => {
     const ta = new Date(a.timestamp || 0).getTime();
     const tb = new Date(b.timestamp || 0).getTime();
     return tb - ta;
   });
 
+  // Initialize currentPage if needed
+  if (typeof window.currentPage === 'undefined') {
+    window.currentPage = 0;
+  }
+
+  // Calculate current page slice
+  const start = window.currentPage * POSTS_PER_PAGE;
+  const end   = start + POSTS_PER_PAGE;
+  const postsToRender = filteredPosts.slice(start, end);
+
+  // Nothing more to render
+  if (postsToRender.length === 0) return;
+
+  // Build and append only this page
   const fragment = document.createDocumentFragment();
-  filteredPosts.forEach(post => {
+  postsToRender.forEach(post => {
     const postCard = createPostCard(post);
     fragment.appendChild(postCard);
   });
-
   container.appendChild(fragment);
 
-  setupPostViewObserver();
+  // Setup viewport observer for newly added cards
+  setupViewportObserver();
 
+  // ✅ ADD THIS: Reinitialize PhotoSwipe for new posts
+  if (typeof initPhotoSwipe === 'function') {
+    initPhotoSwipe();
+  }
+
+  // Refresh AOS animations
   requestAnimationFrame(() => {
     if (typeof AOS !== 'undefined') {
       AOS.refresh();
     }
   });
 
-  // No pagination anymore
-  currentPage = 1;
+  // Move to next page
+  window.currentPage++;
 }
 
-// Track post views when they enter the viewport
-let postViewObserver;
+// =========================
+// Viewport manager: load data only for posts near user
+// =========================
 
-function setupPostViewObserver() {
-  if (!('IntersectionObserver' in window) || !window.posthog) return;
+let viewportObserver = null;
 
-  if (postViewObserver) postViewObserver.disconnect();
+function setupViewportObserver() {
+  if (!('IntersectionObserver' in window)) return;
 
-  postViewObserver = new IntersectionObserver((entries) => {
+  if (viewportObserver) viewportObserver.disconnect();
+
+  viewportObserver = new IntersectionObserver((entries) => {
     entries.forEach(entry => {
+      const card = entry.target;
+      const postId = card.getAttribute('data-post-id');
+      if (!postId) return;
+
       if (entry.isIntersecting) {
-        const card = entry.target;
-        const postId = card.getAttribute('data-post-id');
-        if (!postId) return;
-
-        posthog.capture('view_post', { post_id: postId });
-
-        // Optional: only count first view per card
-        postViewObserver.unobserve(card);
+        handlePostVisible(card, postId);
       }
     });
   }, {
-    threshold: 0.5 // at least 50% of card visible
+    root: null,
+    rootMargin: '200px 0px 400px 0px', // start a bit before/after
+    threshold: 0.25
   });
 
   document.querySelectorAll('.post-card[data-post-id]').forEach(card => {
-    postViewObserver.observe(card);
+    viewportObserver.observe(card);
   });
+}
+
+// Called when a post is at / near the viewport
+function handlePostVisible(card, postId) {
+  // 1) Analytics: view_post (only once)
+  if (window.posthog && !card.__ph_view_tracked) {
+    posthog.capture('view_post', { post_id: postId });
+    card.__ph_view_tracked = true;
+  }
+
+  // 2) Stats: likes + comments for this post (only once)
+  if (!card.__stats_loaded) {
+    const likesDiv = card.querySelector('.likes');
+    const commentsDiv = card.querySelector('.comments-shares');
+    if (window.DataLoader && typeof DataLoader.loadPostStats === 'function' && likesDiv && commentsDiv) {
+      DataLoader.loadPostStats(postId, likesDiv, commentsDiv);
+    }
+    card.__stats_loaded = true;
+  }
+
+  // If later you lazy‑render heavy media, trigger it here too.
 }
 
 console.log("✅ Post renderer loaded");

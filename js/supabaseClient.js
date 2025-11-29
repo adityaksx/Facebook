@@ -13,19 +13,94 @@ function getUserId() {
     return userId;
 }
 
-// Get or prompt for username (only when first interaction happens)
+// Get or prompt for username with beautiful modal
 function getUsername() {
-    let username = localStorage.getItem('fb_username');
-    if (!username) {
-        username = prompt('Enter your name (optional - you can skip):');
-        if (!username || username.trim() === '') {
-            username = 'Anonymous_' + Math.random().toString(36).substr(2, 5);
-        }
-        // ✅ Sanitize username
-        username = Security.sanitizeHTML(username.trim());
-        localStorage.setItem('fb_username', username);
-    }
-    return username;
+    return localStorage.getItem('fb_username') || null;
+}
+
+// New function to show modal and get username
+async function promptUsername() {
+    return new Promise((resolve) => {
+        const modal = document.getElementById('usernameModal');
+        const input = document.getElementById('usernameInput');
+        const submitBtn = document.getElementById('usernameSubmit');
+        const skipBtn = document.getElementById('usernameSkip');
+        const charCount = document.getElementById('charCount');
+
+        // Show modal
+        modal.style.display = 'flex';
+        
+        // Focus input after animation
+        setTimeout(() => input.focus(), 300);
+
+        // Character counter
+        input.addEventListener('input', () => {
+            const length = input.value.length;
+            if (length > 0) {
+                charCount.textContent = `${length}/50`;
+            } else {
+                charCount.textContent = '';
+            }
+        });
+
+        // Handle submit
+        const handleSubmit = () => {
+            let username = input.value.trim();
+            
+            if (!username || username === '') {
+                username = 'Anonymous_' + Math.random().toString(36).substr(2, 5);
+            } else {
+                username = Security.sanitizeHTML(username);
+            }
+            
+            localStorage.setItem('fb_username', username);
+            modal.style.display = 'none';
+            
+            // ✅ Identify in PostHog
+            try {
+                if (typeof posthog !== 'undefined') {
+                    const distinctId = posthog.get_distinct_id();
+                    posthog.identify(distinctId, {
+                        username: username,
+                    });
+                    console.log('✅ PostHog identified:', username);
+                }
+            } catch (e) {
+                console.warn('PostHog identify failed:', e);
+            }
+            
+            resolve(username);
+        };
+
+        // Handle skip
+        const handleSkip = () => {
+            const username = 'Anonymous_' + Math.random().toString(36).substr(2, 5);
+            localStorage.setItem('fb_username', username);
+            modal.style.display = 'none';
+            
+            // Still identify anonymous users
+            try {
+                if (typeof posthog !== 'undefined') {
+                    const distinctId = posthog.get_distinct_id();
+                    posthog.identify(distinctId, {
+                        username: username,
+                    });
+                }
+            } catch (e) {
+                console.warn('PostHog identify failed:', e);
+            }
+            
+            resolve(username);
+        };
+
+        // Enter key submits
+        input.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') handleSubmit();
+        });
+
+        submitBtn.onclick = handleSubmit;
+        skipBtn.onclick = handleSkip;
+    });
 }
 
 // Track user activity
@@ -140,6 +215,7 @@ console.log('✅ Supabase client loaded');
 window.SupabaseClient = {
     getUserId,
     getUsername,
+    promptUsername,
     logUserActivity,
     checkAdminStatus,
     enableAdminFeatures,

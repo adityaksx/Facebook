@@ -47,6 +47,19 @@ function createPostCard(post) {
   // Comments section
   card.appendChild(createCommentsSection(post));
 
+  // ✅ ADD TRANSLATION FEATURE HERE (after all elements are added)
+  if (post.content && window.Translation && typeof window.Translation.addTranslationFeature === 'function') {
+    try {
+      const cleanedContent = Utils.cleanContent(post.content) || "";
+      if (window.Translation.containsHindi(cleanedContent)) {
+        console.log('✅ Adding translation UI for post:', post.id);
+        window.Translation.addTranslationFeature(card, cleanedContent);
+      }
+    } catch (e) {
+      console.warn('Translation error:', e);
+    }
+  }
+
   return card;
 }
 
@@ -149,15 +162,7 @@ function createPostContent(post) {
 
     contentDiv.appendChild(btn);
   }
-
-
   document.body.removeChild(tempDiv);
-
-  // Translation feature
-  if (Translation.containsHindi(cleanedContent)) {
-    Translation.addTranslationFeature(contentDiv, cleanedContent);
-  }
-
   return contentDiv;
 }
 

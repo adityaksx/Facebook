@@ -31,6 +31,11 @@ async function initializeApp() {
             await SupabaseClient.checkAdminStatus();
         }
         
+        // ✅ NEW: Ask for username on first visit (triggers PostHog identify)
+        if (!SupabaseClient.getUsername()) {
+            await SupabaseClient.promptUsername();
+        }
+        
         // 2. Setup UI components
         console.log('📋 Setting up UI components...');
         UIHandlers.setupYearFilter();

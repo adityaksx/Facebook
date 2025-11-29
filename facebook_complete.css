@@ -513,15 +513,16 @@ img {
 
 /* Read more button */
 .read-more-btn {
-    margin-top: 4px;
-    color: #1877f2;
-    cursor: pointer;
-    font-size: 14px;
-    font-weight: 600;
     background: none;
     border: none;
+    color: #1877f2;
     padding: 0;
+    margin-top: 4px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
 }
+
 
 .read-more-btn:hover {
   text-decoration: underline;
@@ -1759,9 +1760,9 @@ body.modal-open {
 .translated-text {
     background: #f0f2f5;
     border-left: 3px solid #1877f2;
-    padding: 12px;
     margin-top: 8px;
-    border-radius: 8px;
+    border-radius: 12px;
+    padding: 10px 12px;
     font-size: 15px;
     color: #050505;
     line-height: 1.3333;
@@ -2453,4 +2454,182 @@ body.modal-open {
     width: 100% !important;
     height: 100% !important;
     min-height: 360px;
+}
+
+/* ============================================ */
+/* USERNAME PROMPT MODAL - Beautiful Design */
+/* ============================================ */
+
+.username-modal {
+    position: fixed;
+    z-index: 9999;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+.username-modal-content {
+    background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+    padding: 40px;
+    border-radius: 16px;
+    width: 450px;
+    max-width: 90%;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    position: relative;
+    animation: slideUp 0.4s ease;
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateY(30px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.username-modal-header {
+    text-align: center;
+    margin-bottom: 24px;
+}
+
+.username-modal-header h2 {
+    font-size: 28px;
+    font-weight: 700;
+    color: #050505;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.username-modal-header p {
+    color: #65676b;
+    font-size: 15px;
+    line-height: 1.4;
+    margin: 0;
+}
+
+.username-input-wrapper {
+    position: relative;
+    margin-bottom: 24px;
+}
+
+.username-input {
+    width: 100%;
+    padding: 14px 16px;
+    border: 2px solid #e4e6eb;
+    border-radius: 10px;
+    font-size: 16px;
+    font-family: inherit;
+    outline: none;
+    transition: all 0.3s ease;
+    background-color: #ffffff;
+}
+
+.username-input:focus {
+    border-color: #1877f2;
+    box-shadow: 0 0 0 4px rgba(24, 119, 242, 0.1);
+}
+
+.username-input::placeholder {
+    color: #8a8d91;
+}
+
+.username-buttons {
+    display: flex;
+    gap: 12px;
+}
+
+.username-btn {
+    flex: 1;
+    padding: 14px 24px;
+    border: none;
+    border-radius: 10px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: inherit;
+}
+
+.username-submit-btn {
+    background: linear-gradient(135deg, #1877f2 0%, #0c63d4 100%);
+    color: white;
+    box-shadow: 0 4px 12px rgba(24, 119, 242, 0.3);
+}
+
+.username-submit-btn:hover {
+    background: linear-gradient(135deg, #166fe5 0%, #0a58ca 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(24, 119, 242, 0.4);
+}
+
+.username-submit-btn:active {
+    transform: translateY(0);
+}
+
+.username-skip-btn {
+    background-color: #e4e6eb;
+    color: #050505;
+}
+
+.username-skip-btn:hover {
+    background-color: #d8dadf;
+}
+
+.username-skip-btn:active {
+    background-color: #ccd0d5;
+}
+
+/* Character counter */
+.username-char-count {
+    position: absolute;
+    right: 12px;
+    bottom: -22px;
+    font-size: 12px;
+    color: #8a8d91;
+}
+
+/* Mobile responsive */
+@media (max-width: 480px) {
+    .username-modal-content {
+        padding: 30px 20px;
+        width: 95%;
+    }
+
+    .username-modal-header h2 {
+        font-size: 24px;
+    }
+
+    .username-modal-header p {
+        font-size: 14px;
+    }
+
+    .username-buttons {
+        flex-direction: column-reverse;
+    }
+
+    .username-btn {
+        width: 100%;
+    }
 }

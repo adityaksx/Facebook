@@ -220,6 +220,40 @@
             <div id="adminLoginError" style="color: red; margin-top: 10px;"></div>
         </div>
     </div>
+    
+    <!-- ADD USERNAME MODAL HERE (right after admin modal) -->
+    <div id="usernameModal" class="username-modal" style="display: none;">
+        <div class="username-modal-content">
+            <div class="username-modal-header">
+                <h2>
+                    <span>👋</span>
+                    Welcome!
+                </h2>
+                <p>Enter your name to personalize your experience<br>(optional - you can skip)</p>
+            </div>
+            
+            <div class="username-input-wrapper">
+                <input 
+                    type="text" 
+                    id="usernameInput" 
+                    class="username-input"
+                    placeholder="Your name" 
+                    maxlength="50"
+                    autocomplete="name"
+                />
+                <span class="username-char-count" id="charCount"></span>
+            </div>
+            
+            <div class="username-buttons">
+                <button id="usernameSkip" class="username-btn username-skip-btn">
+                    Skip
+                </button>
+                <button id="usernameSubmit" class="username-btn username-submit-btn">
+                    Continue
+                </button>
+            </div>
+        </div>
+    </div>
 
     <!-- Tui Image Editor Modal -->
     <div id="tuiEditorModal" class="tui-editor-modal" style="display: none;">
@@ -331,10 +365,10 @@
     <script src="js/admin-actions.js"></script>
     
     <!-- 5. Rendering & UI -->
-    <script src="js/post-renderer.js"></script>
-    <script src="js/image-gallery.js"></script>
     <script src="js/translation.js"></script>
     <script src="js/search.js"></script>
+    <script src="js/post-renderer.js"></script>
+    <script src="js/image-gallery.js"></script>
     <script src="js/ui-handlers.js"></script>
     
     <!-- 6. Main initialization (must load last) -->

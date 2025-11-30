@@ -96,6 +96,7 @@ img {
     margin: 0 auto;
 }
 .nav-center .search-bar {
+    text-align: center;
     align-items: center;
     padding: 10px 16px;
     border-radius: 50px;

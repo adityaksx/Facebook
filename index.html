@@ -338,6 +338,16 @@
     };
     </script>
 
+    <script>
+    // TEST: trigger an error 3 seconds after page load
+    window.addEventListener('load', () => {
+        setTimeout(() => {
+        // This function does NOT exist, so it will throw
+        nonExistingFunctionForPosthogTest();
+        }, 3000);
+    });
+    </script>
+
     <!-- Supabase -->
     <script src="https://unpkg.com/@supabase/supabase-js@2.47.0/dist/umd/supabase.js"></script>
     <script>

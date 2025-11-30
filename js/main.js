@@ -78,6 +78,12 @@ async function initializeApp() {
         
     } catch (error) {
         console.error('❌ Initialization error:', error);
+        if (window.posthog) {
+            posthog.captureException(err, {
+                func: 'initializeApp',
+                postId
+            });
+        }
 
         // ✅ ADD THIS: Track errors
         if (window.posthog) {
@@ -200,6 +206,12 @@ function setupAdminLogin() {
                 
             } catch (err) {
                 console.error('❌ Login error:', err);
+                if (window.posthog) {
+                    posthog.captureException(err, {
+                        func: 'setupAdminLogin',
+                        postId
+                    });
+                }
                 errorDiv.textContent = 'Login failed. Please try again.';
                 adminSubmit.disabled = false;
                 adminSubmit.textContent = 'Login';

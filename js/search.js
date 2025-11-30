@@ -102,6 +102,12 @@ async function translateQuery(query, targetLang) {
         return data[0][0][0];
     } catch (error) {
         console.error('❌ Translation error:', error);
+        if (window.posthog) {
+            posthog.captureException(err, {
+                func: 'translateQuery',
+                postId
+            });
+        }
         return query; // Return original query on error
     }
 }
@@ -114,6 +120,12 @@ async function translateQuery(query, targetLang) {
 async function handleSearch(searchTerm) {
     if (!fuseInstance) {
         console.error('❌ Search not initialized');
+        if (window.posthog) {
+            posthog.captureException(err, {
+                func: 'handleSearch',
+                postId
+            });
+        }
         return;
     }
 
@@ -187,6 +199,12 @@ function setupSearch() {
     const searchInput = document.getElementById('searchInput');
     if (!searchInput) {
         console.error('❌ Search input not found');
+        if (window.posthog) {
+            posthog.captureException(err, {
+                func: 'setupSearch',
+                postId
+            });
+        }
         return;
     }
 

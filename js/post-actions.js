@@ -71,6 +71,12 @@ async function handleLike(postId, likeBtn, likesDiv) {
         
     } catch (err) {
         console.error('❌ Like error:', err);
+        if (window.posthog) {
+        posthog.captureException(err, {
+            func: 'handleLike',
+            postId
+        });
+        }
         Toastify({
             text: "❌ Failed to like post",
             duration: 2000,
@@ -131,6 +137,12 @@ async function handleComment(postId, commentsDiv) {
         
     } catch (err) {
         console.error('❌ Comment error:', err);
+        if (window.posthog) {
+            posthog.captureException(err, {
+                func: 'handleComment',
+                postId
+            });
+        }
         Toastify({
             text: "❌ Error posting comment",
             duration: 3000,
@@ -175,6 +187,12 @@ async function submitComment(postId, message, containerElement) {
         
         if (error) {
             console.error('❌ Error inserting comment:', error);
+            if (window.posthog) {
+                posthog.captureException(err, {
+                    func: 'submitComment',
+                    postId
+                });
+            }
             Toastify({
                 text: "❌ Could not post comment. Please try again.",
                 duration: 3000,
@@ -207,6 +225,12 @@ async function submitComment(postId, message, containerElement) {
         
     } catch (err) {
         console.error('❌ Comment error:', err);
+        if (window.posthog) {
+            posthog.captureException(err, {
+                func: 'submitComment',
+                postId
+            });
+        }
     }
 }
 
@@ -231,6 +255,12 @@ async function checkUserLiked(postId, likeBtn) {
         }
     } catch (err) {
         console.error('❌ Check liked error:', err);
+        if (window.posthog) {
+            posthog.captureException(err, {
+                func: 'checkUserLiked',
+                postId
+            });
+        }
     }
 }
 
@@ -278,6 +308,12 @@ async function deleteComment(commentId, postId) {
         }
     } catch (err) {
         console.error('❌ Delete comment error:', err);
+        if (window.posthog) {
+            posthog.captureException(err, {
+                func: 'deleteComment',
+                postId
+            });
+        }
         Toastify({
             text: "❌ Failed to delete comment",
             duration: 3000,

@@ -316,6 +316,28 @@
     });
     </script>
 
+    <script>
+    // Global JS errors
+    window.onerror = function (message, source, lineno, colno, error) {
+    if (window.posthog) {
+        posthog.captureException(error || new Error(message), {
+        source,
+        lineno,
+        colno
+        });
+    }
+    };
+
+    // Unhandled promise rejections
+    window.onunhandledrejection = function (event) {
+    if (window.posthog) {
+        posthog.captureException(event.reason, {
+        type: 'unhandled_promise_rejection'
+        });
+    }
+    };
+    </script>
+
     <!-- Supabase -->
     <script src="https://unpkg.com/@supabase/supabase-js@2.47.0/dist/umd/supabase.js"></script>
     <script>

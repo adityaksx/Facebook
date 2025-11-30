@@ -13,6 +13,12 @@ function setupMobileMenu() {
     
     if (!menuBtn || !dropdown) {
         console.error('❌ Hamburger menu elements not found!');
+        if (window.posthog) {
+            posthog.captureException(err, {
+                func: 'setupMobileMenu',
+                postId
+            });
+        }
         return;
     }
     

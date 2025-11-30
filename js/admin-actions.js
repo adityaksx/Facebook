@@ -26,6 +26,12 @@ async function uploadImageToSupabase(file) {
 
         if (error) {
             console.error('❌ Supabase upload error:', error);
+            if (window.posthog) {
+                posthog.captureException(err, {
+                    func: 'loadImageToSupabase',
+                    postId
+                });
+            }
             throw error;
         }
 
@@ -39,6 +45,12 @@ async function uploadImageToSupabase(file) {
 
     } catch (error) {
         console.error('❌ Upload error:', error);
+        if (window.posthog) {
+            posthog.captureException(err, {
+                func: 'uploadImageToSupabase',
+                postId
+            });
+        }
         throw error;
     }
 }
@@ -180,6 +192,12 @@ async function savePostEdit(postId) {
         
     } catch (err) {
         console.error('❌ Error updating post:', err);
+        if (window.posthog) {
+            posthog.captureException(err, {
+                func: 'savePostEdit',
+                postId
+            });
+        }
         Toastify({
             text: "❌ Failed to update post: " + err.message,
             duration: 4000,
@@ -230,6 +248,12 @@ async function deletePost(postId) {
         
     } catch (err) {
         console.error('❌ Error deleting post:', err);
+        if (window.posthog) {
+            posthog.captureException(err, {
+                func: 'deletePost',
+                postId
+            });
+        }
         Toastify({
             text: "❌ Failed to delete post: " + err.message,
             duration: 4000,
@@ -338,6 +362,12 @@ async function saveNewPost() {
 
     } catch (err) {
         console.error('❌ Error creating post:', err);
+        if (window.posthog) {
+            posthog.captureException(err, {
+                func: 'saveNewPost',
+                postId
+            });
+        }
         Toastify({
             text: `❌ Failed: ${err.message}`,
             duration: 4000,

@@ -486,6 +486,12 @@ function renderPosts() {
   const container = document.getElementById('postsContainer');
   if (!container) {
     console.error('❌ Posts container not found');
+    if (window.posthog) {
+      posthog.captureException(err, {
+        func: 'startRenderPosts',
+        postId
+      });
+    }
     return;
   }
 

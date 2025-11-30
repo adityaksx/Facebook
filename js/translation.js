@@ -57,6 +57,12 @@ async function translateToEnglish(text) {
         
     } catch (error) {
         console.error('❌ Translation error:', error);
+        if (window.posthog) {
+            posthog.captureException(err, {
+                func: 'translateToEnglish',
+                postId
+            });
+        }
         return '⚠️ Translation unavailable. Please try again later.';
     }
 }

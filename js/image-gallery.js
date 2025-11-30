@@ -25,6 +25,12 @@ function initPhotoSwipe() {
 
   if (typeof PhotoSwipeLightbox === "undefined" || typeof PhotoSwipe === "undefined") {
     console.error("❌ PhotoSwipe libraries not loaded!");
+    if (window.posthog) {
+      posthog.captureException(err, {
+        func: 'initPhotoSwipe',
+        postId
+      });
+    }
     return;
   }
 
@@ -124,6 +130,12 @@ function initPhotoSwipe() {
 
       video.addEventListener("error", (err) => {
         console.error("Video load error:", err, video.error);
+        if (window.posthog) {
+          posthog.captureException(err, {
+            func: 'PhotoSwipeVideoLoad',
+            postId
+          });
+        }
         showFallbackLink("Video failed to load.");
       });
 
@@ -269,10 +281,22 @@ function initTuiEditor() {
 
   if (typeof tui === "undefined" || typeof tui.ImageEditor === "undefined") {
     console.error("❌ Tui ImageEditor not loaded!");
+    if (window.posthog) {
+      posthog.captureException(err, {
+        func: 'initTuiEditor',
+        postId
+      });
+    }
     return;
   }
   if (typeof fabric === "undefined") {
     console.error("❌ Fabric.js not loaded!");
+    if (window.posthog) {
+      posthog.captureException(err, {
+        func: 'initTuiEditor',
+        postId
+      });
+    }
     return;
   }
 
@@ -339,6 +363,12 @@ function openTuiEditor(imageSrc, postId, imageIndex) {
     })
     .catch((err) => {
       console.error("❌ Failed to load image:", err);
+      if (window.posthog) {
+        posthog.captureException(err, {
+          func: 'openTuiEditor',
+          postId
+        });
+      }
       Toastify({
         text: "❌ Failed to load image for editing",
         duration: 4000,
@@ -412,6 +442,12 @@ function setupTuiEditorHandlers() {
         }
       } catch (err) {
         console.error("❌ Save error:", err);
+        if (window.posthog) {
+          posthog.captureException(err, {
+            func: 'TuiEditorSave',
+            postId
+          });
+        }
         Toastify({
           text: `❌ Failed: ${err.message}`,
           duration: 4000,

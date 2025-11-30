@@ -33,6 +33,12 @@ async function loadAllPosts() {
 
         if (error) {
             console.error('❌ Error loading posts from Supabase:', error);
+            if (window.posthog) {
+                posthog.captureException(err, {
+                    func: 'loadAllPosts',
+                    postId
+                });
+            }
             if (loadingDiv) {
                 loadingDiv.textContent = 'Error loading posts.';
             }
@@ -116,6 +122,12 @@ async function loadPostStats(postId, likesDiv, commentsDiv) {
         if (commentSpan) commentSpan.textContent = comments.count || 0;
     } catch (err) {
         console.error('❌ Stats error:', err);
+        if (window.posthog) {
+            posthog.captureException(err, {
+                func: 'loadPostStats',
+                postId
+            });
+        }
     }
 }
 
@@ -133,6 +145,12 @@ async function loadComments(postId, containerElement) {
   
     if (error) {
         console.error('❌ Error loading comments:', error);
+        if (window.posthog) {
+            posthog.captureException(err, {
+                func: 'loadComments',
+                postId
+            });
+        }
         return;
     }
   
@@ -183,6 +201,12 @@ async function loadLikeCount(postId, element) {
     
         if (error) {
             console.error('❌ Error loading likes:', error);
+            if (window.posthog) {
+                posthog.captureException(err, {
+                    func: 'loadLikeCount',
+                    postId
+                });
+            }
             element.innerHTML = '❌ Error loading likes';
             return;
         }
@@ -210,6 +234,12 @@ async function loadLikeCount(postId, element) {
     
     } catch (err) {
         console.error('❌ Like count error:', err);
+        if (window.posthog) {
+            posthog.captureException(err, {
+                func: 'loadLikeCount',
+                postId
+            });
+        }
         element.innerHTML = '❌ Error loading likes';
     }
 }

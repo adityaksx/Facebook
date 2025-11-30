@@ -131,6 +131,12 @@ async function logUserActivity(action, postId) {
             }]);
     } catch (err) {
         console.error('Activity log error:', err);
+        if (window.posthog) {
+            posthog.captureException(err, {
+                func: 'logUserActivity',
+                postId
+            });
+        }
     }
 }
 
@@ -161,6 +167,12 @@ async function checkAdminStatus() {
         }
     } catch (err) {
         console.error('Admin check error:', err);
+        if (window.posthog) {
+            posthog.captureException(err, {
+                func: 'checkAdminStatus',
+                postId
+            });
+        }
         isAdmin = false;
         return false;
     }
